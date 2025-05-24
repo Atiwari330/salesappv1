@@ -35,6 +35,8 @@ import {
   type Contact, // Added Contact type
   dealContact, // Added dealContact
   type DealContact, // Added DealContact type
+  actionItem, // Added actionItem
+  type ActionItem, // Added ActionItem type
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
@@ -945,5 +947,186 @@ export async function removeContactFromDealQuery({ dealId, contactId }: { dealId
   } catch (error) {
     console.error("Error in removeContactFromDealQuery:", error);
     throw new ChatSDKError('bad_request:database', 'Failed to remove contact from deal');
+  }
+}
+
+// ActionItem Queries
+
+export async function createActionItem(input: {
+  dealId: string;
+  description: string;
+  userId: string;
+  isAISuggested?: boolean;
+}): Promise<ActionItem> {
+  try {
+    const [newActionItem] = await db
+      .insert(actionItem)
+      .values({
+        dealId: input.dealId,
+        description: input.description,
+        userId: input.userId,
+        isAISuggested: input.isAISuggested ?? false,
+        // createdAt and updatedAt will use defaultNow()
+      })
+      .returning();
+    if (!newActionItem) {
+      throw new Error('ActionItem creation failed, no record returned.');
+    }
+    return newActionItem;
+  } catch (error) {
+    console.error("Error in createActionItem:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to create action item');
+  }
+}
+
+export async function getActionItemsByDealId({
+  dealId,
+  userId,
+}: {
+  dealId: string;
+  userId: string;
+}): Promise<ActionItem[]> {
+  try {
+    // Verify the user has access to the deal
+    const dealCheck = await findDealByIdAndUserId({ dealId, userId });
+    if (!dealCheck) {
+      // User does not own the deal or deal does not exist
+      console.warn(`User ${userId} attempted to access action items for deal ${dealId} without permission or deal does not exist.`);
+      return []; // Return empty array as per acceptance criteria
+    }
+
+    // Fetch action items for the deal, ordered by creation date
+    const items = await db
+      .select()
+      .from(actionItem)
+      .where(eq(actionItem.dealId, dealId))
+      .orderBy(asc(actionItem.createdAt)); // Order by createdAt ascending
+
+    return items;
+  } catch (error) {
+    console.error("Error in getActionItemsByDealId:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to get action items for deal');
+  }
+}
+
+export async function updateActionItem(
+  itemId: string,
+  userId: string,
+  data: Partial<Pick<ActionItem, 'description' | 'isCompleted'>>,
+): Promise<ActionItem | null> {
+  try {
+    // First, retrieve the action item to find its dealId for authorization
+    const [itemToUpdate] = await db
+      .select({ dealId: actionItem.dealId })
+      .from(actionItem)
+      .where(eq(actionItem.id, itemId));
+
+    if (!itemToUpdate) {
+      console.warn(`ActionItem with id ${itemId} not found for update.`);
+      return null; // Or throw a specific "not found" error
+    }
+
+    // Verify the user owns the deal associated with this action item
+    const dealCheck = await findDealByIdAndUserId({ dealId: itemToUpdate.dealId, userId });
+    if (!dealCheck) {
+      console.warn(`User ${userId} attempted to update action item ${itemId} for deal ${itemToUpdate.dealId} without permission.`);
+      // In a real scenario, you might throw an authorization error or return a specific status
+      return null; // Indicating unauthorized or deal not found for this user
+    }
+
+    // Prepare update data, including refreshing updatedAt
+    const updateData = { ...data, updatedAt: new Date() };
+
+    const [updatedItem] = await db
+      .update(actionItem)
+      .set(updateData)
+      .where(eq(actionItem.id, itemId))
+      .returning();
+    
+    return updatedItem || null;
+  } catch (error) {
+    console.error("Error in updateActionItem:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to update action item');
+  }
+}
+
+export async function deleteActionItem(
+  itemId: string,
+  userId: string,
+): Promise<ActionItem | null> {
+  try {
+    // First, retrieve the action item to find its dealId for authorization
+    const [itemToDelete] = await db
+      .select({ dealId: actionItem.dealId, id: actionItem.id }) // select id as well to return
+      .from(actionItem)
+      .where(eq(actionItem.id, itemId));
+
+    if (!itemToDelete) {
+      console.warn(`ActionItem with id ${itemId} not found for deletion.`);
+      return null;
+    }
+
+    // Verify the user owns the deal associated with this action item
+    const dealCheck = await findDealByIdAndUserId({ dealId: itemToDelete.dealId, userId });
+    if (!dealCheck) {
+      console.warn(`User ${userId} attempted to delete action item ${itemId} for deal ${itemToDelete.dealId} without permission.`);
+      return null;
+    }
+
+    // Perform the deletion
+    const [deletedItem] = await db
+      .delete(actionItem)
+      .where(eq(actionItem.id, itemId))
+      .returning(); // Return the deleted item
+
+    return deletedItem || null;
+  } catch (error) {
+    console.error("Error in deleteActionItem:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to delete action item');
+  }
+}
+
+export async function createMultipleActionItems(
+  itemsData: Array<{
+    dealId: string;
+    description: string;
+    userId: string;
+    isAISuggested?: boolean;
+  }>,
+): Promise<ActionItem[]> {
+  if (itemsData.length === 0) {
+    return [];
+  }
+  try {
+    const valuesToInsert = itemsData.map(item => ({
+      dealId: item.dealId,
+      description: item.description,
+      userId: item.userId,
+      isAISuggested: item.isAISuggested ?? false,
+      // createdAt and updatedAt will use defaultNow()
+    }));
+
+    const newActionItems = await db
+      .insert(actionItem)
+      .values(valuesToInsert)
+      .returning();
+      
+    return newActionItems;
+  } catch (error) {
+    console.error("Error in createMultipleActionItems:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to create multiple action items');
+  }
+}
+
+export async function getActionItemById(itemId: string): Promise<ActionItem | null> {
+  try {
+    const [item] = await db
+      .select()
+      .from(actionItem)
+      .where(eq(actionItem.id, itemId));
+    return item || null;
+  } catch (error) {
+    console.error("Error in getActionItemById:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to get action item by id');
   }
 }

@@ -4,6 +4,7 @@ import { auth } from '@/app/(auth)/auth';
 import { TranscriptSection } from './transcript-section';
 import { DealHeaderClient } from './deal-header-client';
 import { DealContactsSection } from './deal-contacts-section'; // Added import
+import { ActionItemsSection } from './action-items-section'; // Added ActionItemsSection import
 
 interface DealDetailPageProps {
   params: Promise<{ dealId: string }>;
@@ -40,6 +41,9 @@ export default async function DealDetailPage({ params }: DealDetailPageProps) {
 
       {/* Contacts Section */}
       <DealContactsSection dealId={deal.id} />
+
+      {/* Action Items Section */}
+      <ActionItemsSection dealId={deal.id} />
     </div>
   );
 }

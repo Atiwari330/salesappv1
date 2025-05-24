@@ -226,3 +226,16 @@ export const dealContact = pgTable('DealContact', {
 });
 
 export type DealContact = InferSelectModel<typeof dealContact>;
+
+export const actionItem = pgTable('ActionItem', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  dealId: uuid('dealId').notNull().references(() => deal.id, { onDelete: 'cascade' }),
+  description: text('description').notNull(),
+  isCompleted: boolean('isCompleted').notNull().default(false),
+  isAISuggested: boolean('isAISuggested').notNull().default(false),
+  userId: uuid('userId').notNull().references(() => user.id),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+});
+
+export type ActionItem = InferSelectModel<typeof actionItem>;
