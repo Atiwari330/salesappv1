@@ -4,7 +4,8 @@ import { getTranscriptById, getDealById } from '@/lib/db/queries';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns'; // For formatting date
-import { TranscriptActionItemsClient } from './transcript-action-items-client'; // Import the new client component
+import { TranscriptActionItemsClient } from './transcript-action-items-client';
+import { TranscriptEmailGeneratorClient } from './transcript-email-generator-client'; // Import the email generator client
 
 interface TranscriptDetailPageProps {
   params: {
@@ -86,6 +87,9 @@ export default async function TranscriptDetailPage({ params: incomingParams }: T
 
       {/* Action Items Section for this Transcript */}
       <TranscriptActionItemsClient transcriptId={transcriptId} dealId={dealId} />
+
+      {/* Email Generation Section for this Transcript */}
+      <TranscriptEmailGeneratorClient transcriptId={transcriptId} />
 
        {/* Placeholder for Q&A Section (Future) */}
        {/* 
