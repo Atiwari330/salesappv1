@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns'; // For formatting date
 import { TranscriptActionItemsClient } from './transcript-action-items-client';
 import { TranscriptEmailGeneratorClient } from './transcript-email-generator-client'; // Import the email generator client
+import TranscriptDisplay from './transcript-display'; // Import the new TranscriptDisplay component
 
 interface TranscriptDetailPageProps {
   params: {
@@ -79,9 +80,7 @@ export default async function TranscriptDetailPage({ params: incomingParams }: T
         <Separator />
         <CardContent className="pt-6">
           <h3 className="text-lg font-semibold mb-2">Transcript Content:</h3>
-          <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap bg-muted p-4 rounded-md">
-            {transcript.content}
-          </div>
+          <TranscriptDisplay content={transcript.content} />
         </CardContent>
       </Card>
 
