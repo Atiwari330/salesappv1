@@ -34,6 +34,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { TranscriptViewerModal } from './transcript-viewer-modal';
+import { TranscriptQnASection } from './transcript-qna-section'; // Added import
 
 interface TranscriptSectionProps {
   dealName: string;
@@ -236,6 +237,9 @@ export function TranscriptSection({ dealName, dealId, initialTranscripts }: Tran
           </p>
         </div>
       )}
+
+      {/* AI Q&A Section */}
+      <TranscriptQnASection initialTranscripts={initialTranscripts} dealId={dealId} />
 
       <TranscriptViewerModal
         isOpen={isViewerOpen}

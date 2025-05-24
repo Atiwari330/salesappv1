@@ -243,3 +243,59 @@ export async function deleteTranscriptAction(transcriptId: string, dealId: strin
     };
   }
 }
+
+/**
+ * Server action to answer a user's question based on combined transcript content.
+ * @param allTranscriptsContent - A single string containing all formatted transcript texts.
+ * @param userQuestion - The user's question about the transcripts.
+ * @returns An object with `success: true` and the `answer`, or `success: false` and an `error` message.
+ */
+export async function answerTranscriptQuestionAction(
+  allTranscriptsContent: string,
+  userQuestion: string
+): Promise<{ success: boolean; answer?: string; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: 'Unauthorized. Please log in.' };
+  }
+
+  if (!allTranscriptsContent.trim() || !userQuestion.trim()) {
+    return { success: false, error: 'Transcript content and question cannot be empty.' };
+  }
+
+  const prompt = `
+You are an AI assistant. Your task is to answer the following question based *solely* on the provided "Transcript Context" below.
+Do not use any external knowledge or make assumptions beyond what is explicitly stated in the transcripts.
+If the answer cannot be found in the provided transcripts, you MUST respond with: "The answer cannot be found in the provided transcripts."
+
+Transcript Context:
+---
+${allTranscriptsContent}
+---
+
+User Question: ${userQuestion}
+  `;
+
+  try {
+    const { text: answer } = await generateText({
+      model: myProvider.languageModel('chat-model'),
+      prompt: prompt,
+    });
+
+    if (!answer || answer.trim() === '') {
+      return { success: false, error: 'The AI failed to generate an answer. Please try again.' };
+    }
+
+    return { success: true, answer: answer.trim() };
+  } catch (error) {
+    console.error('Error in answerTranscriptQuestionAction LLM call:', error);
+    // Check for specific error types if needed, e.g., API key issues
+    if (error instanceof Error && error.message.includes('authentication')) {
+      return { success: false, error: 'LLM authentication failed. Please check your API key configuration.' };
+    }
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'An unexpected error occurred while trying to get an answer.' 
+    };
+  }
+}
