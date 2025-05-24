@@ -27,6 +27,10 @@ import {
   type DBMessage,
   type Chat,
   stream,
+  deal,
+  type Deal,
+  transcript,
+  type Transcript,
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
@@ -533,6 +537,169 @@ export async function getStreamIdsByChatId({ chatId }: { chatId: string }) {
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get stream ids by chat id',
+    );
+  }
+}
+
+export async function createDeal({
+  name,
+  userId,
+}: {
+  name: string;
+  userId: string;
+}) {
+  try {
+    return await db
+      .insert(deal)
+      .values({
+        name,
+        userId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to create deal');
+  }
+}
+
+export async function getDealsByUserId({ userId }: { userId: string }) {
+  try {
+    return await db
+      .select()
+      .from(deal)
+      .where(eq(deal.userId, userId))
+      .orderBy(desc(deal.createdAt));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get deals by user id',
+    );
+  }
+}
+
+export async function getDealById({ id }: { id: string }) {
+  try {
+    const [selectedDeal] = await db.select().from(deal).where(eq(deal.id, id));
+    return selectedDeal;
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to get deal by id');
+  }
+}
+
+export async function updateDeal({
+  id,
+  name,
+}: {
+  id: string;
+  name: string;
+}) {
+  try {
+    return await db
+      .update(deal)
+      .set({ name, updatedAt: new Date() })
+      .where(eq(deal.id, id))
+      .returning();
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to update deal');
+  }
+}
+
+export async function deleteDeal({ id }: { id: string }) {
+  try {
+    const [deletedDeal] = await db
+      .delete(deal)
+      .where(eq(deal.id, id))
+      .returning();
+    return deletedDeal;
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to delete deal');
+  }
+}
+
+export async function createTranscript({
+  dealId,
+  fileName,
+  content,
+  callDate,
+  callTime,
+}: {
+  dealId: string;
+  fileName: string;
+  content: string;
+  callDate: string;
+  callTime: string;
+}) {
+  try {
+    return await db
+      .insert(transcript)
+      .values({
+        dealId,
+        fileName,
+        content,
+        callDate,
+        callTime,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to create transcript');
+  }
+}
+
+export async function getTranscriptsByDealId({ dealId }: { dealId: string }) {
+  try {
+    return await db
+      .select()
+      .from(transcript)
+      .where(eq(transcript.dealId, dealId))
+      .orderBy(desc(transcript.createdAt));
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get transcripts by deal id',
+    );
+  }
+}
+
+export async function getTranscriptById({ id }: { id: string }) {
+  try {
+    const [selectedTranscript] = await db
+      .select()
+      .from(transcript)
+      .where(eq(transcript.id, id));
+    return selectedTranscript;
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to get transcript by id');
+  }
+}
+
+export async function deleteTranscript({ id }: { id: string }) {
+  try {
+    const [deletedTranscript] = await db
+      .delete(transcript)
+      .where(eq(transcript.id, id))
+      .returning();
+    return deletedTranscript;
+  } catch (error) {
+    throw new ChatSDKError('bad_request:database', 'Failed to delete transcript');
+  }
+}
+
+export async function getTranscriptCountByDealId({ dealId }: { dealId: string }) {
+  try {
+    const [stats] = await db
+      .select({ count: count(transcript.id) })
+      .from(transcript)
+      .where(eq(transcript.dealId, dealId))
+      .execute();
+
+    return stats?.count ?? 0;
+  } catch (error) {
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get transcript count by deal id',
     );
   }
 }

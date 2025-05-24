@@ -168,3 +168,30 @@ export const stream = pgTable(
 );
 
 export type Stream = InferSelectModel<typeof stream>;
+
+export const deal = pgTable('Deal', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+});
+
+export type Deal = InferSelectModel<typeof deal>;
+
+export const transcript = pgTable('Transcript', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  dealId: uuid('dealId')
+    .notNull()
+    .references(() => deal.id),
+  fileName: varchar('fileName', { length: 255 }).notNull(),
+  content: text('content').notNull(),
+  callDate: varchar('callDate', { length: 10 }).notNull(), // YYYY-MM-DD format
+  callTime: varchar('callTime', { length: 5 }).notNull(), // HH:MM format
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+});
+
+export type Transcript = InferSelectModel<typeof transcript>;
