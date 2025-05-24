@@ -9,6 +9,8 @@ import {
   deleteTranscript as deleteTranscriptQuery, // Renamed to avoid conflict
   getTranscriptById
 } from '@/lib/db/queries'; 
+import { myProvider } from '@/lib/ai/providers'; // Added for LLM
+import { generateText } from 'ai'; // Added for LLM
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
@@ -56,6 +58,72 @@ export async function uploadTranscript(formData: FormData) {
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to upload transcript'
+    };
+  }
+}
+
+export async function draftFollowUpEmailAction(transcriptId: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    // In a real app, you might redirect or throw a specific auth error
+    // For now, returning an error object similar to other actions
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    const transcript = await getTranscriptById({ id: transcriptId });
+
+    if (!transcript) {
+      return { success: false, error: 'Transcript not found.' };
+    }
+
+    if (!transcript.content || transcript.content.trim() === '') {
+      return { success: false, error: 'Transcript content is empty.' };
+    }
+    
+    // Verify the user owns the deal associated with this transcript
+    const deal = await getDealById({ id: transcript.dealId });
+    if (!deal || deal.userId !== session.user.id) {
+      return { success: false, error: 'Unauthorized to access this transcript.' };
+    }
+
+    const prompt = `
+      Role: You are an expert email writer for sales professionals.
+      Goal: Draft a concise and actionable follow-up email to keep momentum going with a prospect after a sales call.
+      Context: The following is a transcript of the sales call.
+      Transcript:
+      ---
+      ${transcript.content}
+      ---
+      Instructions:
+      - Keep the email brief and to the point.
+      - Reference key discussion points or agreements from the transcript.
+      - Propose a clear next step.
+      - Maintain a professional and friendly tone.
+      - Do not include a subject line, only the body of the email.
+      - Do not include a generic greeting like "Dear [Prospect Name]," or a sign-off like "Best regards, [Your Name]". Focus solely on the email body content that would go between a greeting and a sign-off.
+    `;
+
+    const { text: emailText } = await generateText({
+      model: myProvider.languageModel('chat-model'),
+      prompt: prompt,
+    });
+
+    if (!emailText || emailText.trim() === '') {
+      return { success: false, error: 'LLM failed to generate email content.' };
+    }
+
+    return { success: true, emailText };
+
+  } catch (error) {
+    console.error('Draft follow-up email error:', error);
+    if (error instanceof Error && error.message.includes('authentication')) {
+      // Handle potential API key errors more specifically if needed
+      return { success: false, error: 'LLM authentication failed. Please check API key.' };
+    }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to draft follow-up email.',
     };
   }
 }
