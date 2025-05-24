@@ -118,3 +118,212 @@
 - Presentation of these "intelligence briefings" to the user within the deal context.
 
 **User Value:** Equips sales reps with timely and pertinent information to personalize conversations, demonstrate industry awareness, and identify new value propositions or talking points.
+
+AI-First CRM Platform Feature List
+
+1. Gmail Integration for Deal Context & Smart Replies
+   Description:
+   Automatically link Gmail conversations to Deal Entities by matching contact emails.
+
+Detect unread messages and highlight them in the deal view.
+
+Fetch the last 2–3 emails per contact and store them contextually in the deal.
+
+Use the combined email + transcript history to generate:
+
+Context-aware replies
+
+Follow-up suggestions
+
+Summary of outstanding questions
+
+Intelligent re-engagement nudges
+
+Key Feature:
+“Generate Smart Reply” button pulls from full historical context (emails + Zoom calls) to craft personalized responses.
+
+2. Zoom Transcript Upload, Parsing & AI Engagement
+   Description:
+   Upload multiple Zoom call transcripts to a Deal.
+
+Parse each transcript for:
+
+Key points
+
+Action items
+
+Objections
+
+Questions asked
+
+Allow users to generate follow-up emails per individual transcript.
+
+Key Feature:
+Each transcript card can generate its own follow-up or be grouped for broader analysis.
+
+3. Multi-Transcript Chat Interface (with Context Ingestion)
+   Description:
+   Users can select one, several, or all transcripts within a deal.
+
+Upon selection, they are redirected to a chat UI (reusing your existing chatbot component).
+
+Chatbot is injected with the selected transcripts and primed with instructions:
+
+“Ingest this info and answer any questions across these conversations.”
+
+LLM responds: “Ready,” then waits for user queries.
+
+Context Handling:
+No RAG. All selected transcript content is injected upfront or per-message.
+Use Cases:
+Ask “What were the major objections across these three calls?”
+
+“Did I already discuss pricing with them?”
+
+“Summarize the last meeting.”
+
+4. LinkedIn Profile Scraper for Contact Enrichment
+   Description:
+   Allow the user to attach a LinkedIn profile URL to any contact.
+
+A bot scrapes the profile for:
+
+Title
+
+Work history
+
+Industry focus
+
+About section
+
+Data stored as enriched context for that contact and used in AI replies.
+
+Key Feature:
+“Generate outreach referencing contact’s role” uses scraped LinkedIn insights for more relevant emails.
+
+5. Website Scraping & Intelligence Module (Deal-Level)
+   Description:
+   Tie a business website URL to each Deal Entity.
+
+Run a bot that scrapes the website and summarizes:
+
+Services offered
+
+Payor model (e.g., self-pay, Medicaid, commercial)
+
+Locations
+
+Contact information
+
+Leadership team if visible
+
+Key Feature:
+“Organization Summary” appears in deal view with key details and FAQs generated from the scraped content.
+
+6. Website Watcher Bot for Dynamic Updates
+   Description:
+   Periodically re-scrape the client’s website and detect:
+
+New blog posts
+
+Press releases
+
+Job openings
+
+Location openings
+
+Service expansion
+
+Automatically flag deals when something new is found that could serve as a sales re-engagement hook.
+
+Key Feature:
+“Newsworthy Events” tab in the deal view with AI-written recommendations for how to engage based on updates.
+
+7. AI-Powered Outreach Generator with Deep Context
+   Description:
+   Pull from any combination of:
+
+Emails
+
+Zoom call transcripts
+
+LinkedIn details
+
+Website info
+
+Internal notes or deal tags
+
+AI generates:
+
+Cold re-engagement emails
+
+Post-demo follow-ups
+
+Upsell messages
+
+Key Feature:
+“Compose Outreach” uses a sliding toggle to select tone (friendly, formal, direct) and length.
+
+8. Deal Activity Radar (Pending Emails & Opportunities)
+   Description:
+   Dashboard widget showing:
+
+Which deals have unread emails
+
+Which deals haven’t had engagement in X days
+
+Deals with recent news detected via watcher bot
+
+Key Feature:
+“Radar Alerts” notify the user which deals need attention and why — e.g., “Unread email from CFO,” or “New location opened in AZ.”
+
+9. Transcript-Centric Insight Pinning
+   (Future Enhancement)
+   Description:
+   Let users “pin” AI-generated insights or takeaways from transcripts to the deal record.
+
+These pins could be converted into tasks, reminders, or summary cards.
+
+Example Use Case:
+“Client said they need API access — pin this and remind me in 7 days.”
+
+10. Real-Time Meeting Bot for Auto-Transcription & Deal Assignment
+    Description:
+    Leverage a service like RecallAI to create a virtual meeting bot that can join video calls across platforms (Zoom, Google Meet, Microsoft Teams, etc.).
+
+The bot will automatically transcribe the conversation in real time.
+
+Once the meeting ends, the transcript is:
+
+Analyzed to detect participants, keywords, or context clues
+
+Matched to an existing Deal Entity using contact email, meeting invite metadata, or fuzzy logic based on transcript content
+
+Behavior:
+If a match is found:
+
+Transcript is automatically assigned to that deal
+
+It becomes part of the “Transcripts” section inside the deal, just like manually uploaded ones
+
+If no match is found:
+
+The transcript is placed into a holding area titled “Unclassified Transcriptions”
+
+User can view a queue of unassigned transcripts, preview the content, and manually assign them to the appropriate deal
+
+Key Features:
+Real-time cross-platform meeting recording (via RecallAI or similar)
+
+Auto-deal association using email/contact matching or intelligent guessing
+
+Manual assignment UI for any unlinked transcripts
+
+All transcripts become searchable and usable in chat, summarization, and email generation features once linked
+
+Future Enhancements (Post-MVP):
+Confidence scoring for auto-assignment
+
+Notification to user: “New transcript added to Unclassified queue”
+
+Smart suggestions: “This transcript may belong to Deal X”
