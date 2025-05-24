@@ -3,6 +3,7 @@ import { getDealById, getTranscriptsByDealId } from '@/lib/db/queries';
 import { auth } from '@/app/(auth)/auth';
 import { TranscriptSection } from './transcript-section';
 import { DealHeaderClient } from './deal-header-client';
+import { DealContactsSection } from './deal-contacts-section'; // Added import
 
 interface DealDetailPageProps {
   params: Promise<{ dealId: string }>;
@@ -36,6 +37,9 @@ export default async function DealDetailPage({ params }: DealDetailPageProps) {
 
       {/* Transcripts Section */}
       <TranscriptSection dealName={deal.name} dealId={dealId} initialTranscripts={transcripts} />
+
+      {/* Contacts Section */}
+      <DealContactsSection dealId={deal.id} />
     </div>
   );
 }

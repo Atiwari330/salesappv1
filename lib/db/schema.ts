@@ -195,3 +195,34 @@ export const transcript = pgTable('Transcript', {
 });
 
 export type Transcript = InferSelectModel<typeof transcript>;
+
+export const contact = pgTable('Contact', {
+  id: uuid('id').primaryKey().notNull().defaultRandom(),
+  firstName: varchar('firstName', { length: 100 }).notNull(),
+  lastName: varchar('lastName', { length: 100 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  jobTitle: varchar('jobTitle', { length: 150 }),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => user.id),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+  updatedAt: timestamp('updatedAt').notNull().defaultNow(),
+});
+
+export type Contact = InferSelectModel<typeof contact>;
+
+export const dealContact = pgTable('DealContact', {
+  dealId: uuid('dealId')
+    .notNull()
+    .references(() => deal.id),
+  contactId: uuid('contactId')
+    .notNull()
+    .references(() => contact.id),
+  roleInDeal: varchar('roleInDeal', { length: 100 }),
+}, (table) => {
+  return {
+    pk: primaryKey({ columns: [table.dealId, table.contactId] }),
+  };
+});
+
+export type DealContact = InferSelectModel<typeof dealContact>;

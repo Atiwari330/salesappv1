@@ -38,7 +38,7 @@ This document outlines the user stories for implementing the foundational Deal C
     - `updatedAt` (timestamp, not null, defaultNow)
   - And a Drizzle migration is successfully generated and can be applied.
 - **Dependencies:** None
-- **Checkbox:** `[ ]`
+- **Checkbox:** `[x]`
 
 **Story 1.2 (P0)**
 
@@ -53,7 +53,7 @@ This document outlines the user stories for implementing the foundational Deal C
   - And a composite primary key is defined on (`dealId`, `contactId`).
   - And a Drizzle migration is successfully generated and can be applied.
 - **Dependencies:** Story 1.1 (for `contact.id` foreign key)
-- **Checkbox:** `[ ]`
+- **Checkbox:** `[x]`
 
 **Story 1.3 (P1)**
 
@@ -68,7 +68,7 @@ This document outlines the user stories for implementing the foundational Deal C
     - Input validation is performed for required fields (e.g., email, dealId).
     - If an error occurs (e.g., database error, validation failure), the action returns an appropriate error message.
 - **Dependencies:** Story 1.1, Story 1.2
-- **Checkbox:** `[ ]`
+- **Checkbox:** `[x]`
 
 **Story 1.4 (P1)**
 
@@ -80,7 +80,7 @@ This document outlines the user stories for implementing the foundational Deal C
   - If no contacts are associated, an empty list is returned.
   - If the deal does not exist or an error occurs, an appropriate error or empty list is returned.
 - **Dependencies:** Story 1.1, Story 1.2
-- **Checkbox:** `[ ]`
+- **Checkbox:** `[x]`
 
 ---
 
@@ -98,7 +98,7 @@ This document outlines the user stories for implementing the foundational Deal C
   - If there are no contacts, a message like "No contacts added yet." is displayed.
 - **Dependencies:** Story 1.4
 - **UI Component:** `app/(main)/deals/[dealId]/deal-contacts-section.tsx`
-- **Checkbox:** `[ ]`
+- **Checkbox:** `[x]`
 
 **Story 2.2 (P2)**
 
@@ -108,7 +108,7 @@ This document outlines the user stories for implementing the foundational Deal C
   - When the section is displayed,
   - Then an "Add Contact" button is visible.
 - **Dependencies:** Story 2.1 (for the section to exist)
-- **Checkbox:** `[ ]`
+- **Checkbox:** `[x]`
 
 **Story 2.3 (P2)**
 
@@ -125,7 +125,7 @@ This document outlines the user stories for implementing the foundational Deal C
   - And if there's an error, an error message is displayed within the modal or as a toast notification.
   - When I click "Cancel", the modal closes without saving.
 - **Dependencies:** Story 1.3, Story 2.2
-- **Checkbox:** `[ ]`
+- **Checkbox:** `[x]`
 
 ---
 
@@ -142,7 +142,7 @@ This document outlines the user stories for implementing the foundational Deal C
   - And the action returns a success status.
   - If an error occurs (e.g., association not found), the action returns an appropriate error message.
 - **Dependencies:** Story 1.2
-- **Checkbox:** `[ ]`
+- **Checkbox:** `[x]`
 
 **Story 3.2 (P2)**
 
@@ -157,7 +157,7 @@ This document outlines the user stories for implementing the foundational Deal C
   - And upon successful removal, the contact list updates to remove the contact.
   - And if there's an error, an error message is displayed (e.g., as a toast).
 - **Dependencies:** Story 2.1, Story 3.1
-- **Checkbox:** `[ ]`
+- **Checkbox:** `[x]`
 
 ## Roadmap Integration
 

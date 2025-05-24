@@ -31,6 +31,10 @@ import {
   type Deal,
   transcript,
   type Transcript,
+  contact, // Added contact
+  type Contact, // Added Contact type
+  dealContact, // Added dealContact
+  type DealContact, // Added DealContact type
 } from './schema';
 import type { ArtifactKind } from '@/components/artifact';
 import { generateUUID } from '../utils';
@@ -746,5 +750,200 @@ export async function getTranscriptCountByDealId({ dealId }: { dealId: string })
       'bad_request:database',
       'Failed to get transcript count by deal id',
     );
+  }
+}
+
+// Contact and DealContact Queries
+
+export async function findDealByIdAndUserId({ dealId, userId }: { dealId: string; userId: string }): Promise<Deal | undefined> {
+  try {
+    const [foundDeal] = await db
+      .select()
+      .from(deal)
+      .where(and(eq(deal.id, dealId), eq(deal.userId, userId)))
+      .limit(1);
+    return foundDeal;
+  } catch (error) {
+    console.error("Error in findDealByIdAndUserId:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to find deal by id and user id');
+  }
+}
+
+export async function findContactByEmailAndUserId({ email, userId }: { email: string; userId: string }): Promise<Contact | undefined> {
+  try {
+    const [foundContact] = await db
+      .select()
+      .from(contact)
+      .where(and(eq(contact.email, email), eq(contact.userId, userId)))
+      .limit(1);
+    return foundContact;
+  } catch (error) {
+    console.error("Error in findContactByEmailAndUserId:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to find contact by email and user id');
+  }
+}
+
+export async function createNewContact(input: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  jobTitle?: string | null;
+  userId: string;
+}): Promise<Contact> {
+  try {
+    const [newContact] = await db
+      .insert(contact)
+      .values({
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: input.email,
+        jobTitle: input.jobTitle,
+        userId: input.userId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    if (!newContact) {
+      throw new Error('Contact creation failed, no record returned.');
+    }
+    return newContact;
+  } catch (error) {
+    console.error("Error in createNewContact:", error);
+    // Consider checking for unique constraint violation if not already handled by DB/Drizzle
+    throw new ChatSDKError('bad_request:database', 'Failed to create new contact');
+  }
+}
+
+export async function findDealContact({ dealId, contactId }: { dealId: string; contactId: string }): Promise<DealContact | undefined> {
+  try {
+    const [foundDealContact] = await db
+      .select()
+      .from(dealContact)
+      .where(and(eq(dealContact.dealId, dealId), eq(dealContact.contactId, contactId)))
+      .limit(1);
+    return foundDealContact;
+  } catch (error) {
+    console.error("Error in findDealContact:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to find deal-contact association');
+  }
+}
+
+export async function createNewDealContact(input: {
+  dealId: string;
+  contactId: string;
+  roleInDeal?: string | null;
+}): Promise<DealContact> {
+  try {
+    const [newDealContact] = await db
+      .insert(dealContact)
+      .values({
+        dealId: input.dealId,
+        contactId: input.contactId,
+        roleInDeal: input.roleInDeal,
+      })
+      .returning();
+    if (!newDealContact) {
+      throw new Error('DealContact creation failed, no record returned.');
+    }
+    return newDealContact;
+  } catch (error) {
+    console.error("Error in createNewDealContact:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to create deal-contact association');
+  }
+}
+
+export async function updateDealContactRole(input: {
+  dealId: string;
+  contactId: string;
+  roleInDeal?: string | null;
+}): Promise<DealContact> {
+  try {
+    const [updatedDealContact] = await db
+      .update(dealContact)
+      .set({ roleInDeal: input.roleInDeal })
+      .where(and(eq(dealContact.dealId, input.dealId), eq(dealContact.contactId, input.contactId)))
+      .returning();
+    if (!updatedDealContact) {
+      throw new Error('DealContact role update failed, no record returned or association not found.');
+    }
+    return updatedDealContact;
+  } catch (error) {
+    console.error("Error in updateDealContactRole:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to update deal-contact role');
+  }
+}
+
+export type ContactWithRole = Contact & { roleInDeal: string | null };
+
+export async function getContactsForDeal({ dealId, userId }: { dealId: string; userId: string }): Promise<ContactWithRole[]> {
+  try {
+    // First, verify the user has access to the deal
+    const dealCheck = await findDealByIdAndUserId({ dealId, userId });
+    if (!dealCheck) {
+      // Or throw an error, or return empty array if preferred for non-existent/unauthorized deals
+      console.warn(`User ${userId} attempted to access contacts for deal ${dealId} without permission or deal does not exist.`);
+      return []; 
+    }
+
+    const results = await db
+      .select({
+        // Select all columns from contact table
+        id: contact.id,
+        firstName: contact.firstName,
+        lastName: contact.lastName,
+        email: contact.email,
+        jobTitle: contact.jobTitle,
+        userId: contact.userId,
+        createdAt: contact.createdAt,
+        updatedAt: contact.updatedAt,
+        // Select roleInDeal from dealContact table
+        roleInDeal: dealContact.roleInDeal,
+      })
+      .from(contact)
+      .innerJoin(dealContact, eq(contact.id, dealContact.contactId))
+      .where(eq(dealContact.dealId, dealId))
+      .orderBy(contact.lastName, contact.firstName); // Optional: order by name
+
+    return results.map(r => ({
+      id: r.id,
+      firstName: r.firstName,
+      lastName: r.lastName,
+      email: r.email,
+      jobTitle: r.jobTitle,
+      userId: r.userId,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      roleInDeal: r.roleInDeal,
+    }));
+  } catch (error) {
+    console.error("Error in getContactsForDeal:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to get contacts for deal');
+  }
+}
+
+export async function removeContactFromDealQuery({ dealId, contactId }: { dealId: string; contactId: string }): Promise<{ success: boolean, error?: string }> {
+  try {
+    // Note: Authorization (ensuring the user owns the deal) should be handled in the server action
+    // before calling this query, or this query could be extended to take userId.
+    // For now, it directly attempts the deletion based on dealId and contactId.
+    const result = await db
+      .delete(dealContact)
+      .where(and(eq(dealContact.dealId, dealId), eq(dealContact.contactId, contactId)))
+      .returning(); // .returning() might not be supported by all drivers or needed if we just check affectedRows
+
+    // Check if any row was actually deleted.
+    // The exact way to check affected rows depends on the Drizzle driver and DB.
+    // For pg, .returning() will return the deleted rows. If empty, nothing was deleted.
+    if (result.length === 0) {
+      // This could mean the association didn't exist in the first place.
+      // Depending on desired behavior, this could be an error or a silent success.
+      // For now, let's treat it as a "not found" scenario which the action can interpret.
+      return { success: false, error: "Association not found or already removed." };
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Error in removeContactFromDealQuery:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to remove contact from deal');
   }
 }
