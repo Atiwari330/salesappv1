@@ -14,7 +14,8 @@ import {
   getTranscriptsByDealId, // Added for scanning transcripts
   createMultipleActionItems, // Added for scanning transcripts
   getActionItemById, // Added for deleting action items
-  getActionItemsByDealId // Added for fetching action items
+  getActionItemsByDealId, // Added for fetching action items
+  getActionItemsByTranscriptId // Added for transcript-specific items
 } from '@/lib/db/queries'; 
 import type { ActionItem, Transcript } from '@/lib/db/schema'; // Import ActionItem & Transcript types from schema
 import { myProvider } from '@/lib/ai/providers'; // Added for LLM
@@ -72,6 +73,32 @@ export async function uploadTranscript(formData: FormData) {
 
 // Action Item Server Actions
 
+export async function getActionItemsForTranscriptAction(
+  transcriptId: string,
+): Promise<{ success: boolean; items?: ActionItem[]; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: 'Unauthorized. Please log in.' };
+  }
+
+  if (!transcriptId) {
+    return { success: false, error: 'Transcript ID is required.' };
+  }
+
+  try {
+    // getActionItemsByTranscriptId in queries.ts handles user authorization
+    // by checking if the user owns the deal associated with the transcript.
+    const items = await getActionItemsByTranscriptId({ transcriptId, userId: session.user.id });
+    return { success: true, items };
+  } catch (error) {
+    console.error('Error in getActionItemsForTranscriptAction:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch action items for transcript.',
+    };
+  }
+}
+
 export async function getActionItemsForDealAction(
   dealId: string,
 ): Promise<{ success: boolean; items?: ActionItem[]; error?: string }> {
@@ -100,6 +127,7 @@ export async function getActionItemsForDealAction(
 export async function addUserActionItemAction(
   dealId: string,
   description: string,
+  transcriptId?: string | null, // Added transcriptId parameter
 ): Promise<{ success: boolean; actionItem?: ActionItem; error?: string }> {
   const session = await auth();
   if (!session?.user?.id) {
@@ -119,6 +147,7 @@ export async function addUserActionItemAction(
 
     const newActionItem = await createActionItem({
       dealId,
+      transcriptId: transcriptId, // Pass transcriptId
       description: description.trim(),
       userId: session.user.id,
       isAISuggested: false,
@@ -222,8 +251,9 @@ export async function deleteUserActionItemAction(
   }
 }
 
-export async function scanTranscriptsForActionItemsAction(
-  dealId: string,
+export async function scanSingleTranscriptForActionItemsAction( // Renamed and added transcriptId
+  dealId: string, // dealId is still needed for deal context and FK
+  transcriptId: string,
 ): Promise<{ success: boolean; newItems?: ActionItem[]; count?: number; error?: string }> {
   const session = await auth();
   if (!session?.user?.id) {
@@ -241,26 +271,22 @@ export async function scanTranscriptsForActionItemsAction(
       return { success: false, error: 'Deal not found or unauthorized.' };
     }
 
-    // 2. Fetch all transcripts for the deal
-    const transcripts: Transcript[] = await getTranscriptsByDealId({ dealId });
+    // 2. Fetch the specific transcript
+    const transcript = await getTranscriptById({ id: transcriptId });
 
-    // 3. Combine content from all transcripts. If none, return.
-    if (transcripts.length === 0) {
-      return { success: true, newItems: [], count: 0, error: 'No transcripts found for this deal to scan.' };
+    // 3. Check if transcript exists and has content
+    if (!transcript) {
+      return { success: false, error: 'Transcript not found.' };
     }
-
-    let allTranscriptsContent = "";
-    for (const transcript of transcripts) {
-      allTranscriptsContent += `Transcript from ${transcript.callDate} ${transcript.callTime} (${transcript.fileName}):\n${transcript.content}\n\n---\n\n`;
-    }
-
-    if (!allTranscriptsContent.trim()) {
+    if (!transcript.content || !transcript.content.trim()) {
       return { success: true, newItems: [], count: 0, error: 'Transcript content is empty or missing.' };
     }
 
+    const singleTranscriptContent = `Transcript from ${transcript.callDate} ${transcript.callTime} (${transcript.fileName}):\n${transcript.content}\n`;
+
     // 4. Construct a prompt for an LLM
     const prompt = `
-      Analyze the following sales call transcript(s) for the deal "${deal.name}".
+      Analyze the following sales call transcript for the deal "${deal.name}".
       Identify and extract a list of clear, concise, and actionable tasks or follow-up items.
       Each action item should be a short phrase starting with a verb.
       If no specific action items can be identified, respond with an empty list or "No action items found.".
@@ -268,7 +294,7 @@ export async function scanTranscriptsForActionItemsAction(
 
       Transcript Context:
       ---
-      ${allTranscriptsContent}
+      ${singleTranscriptContent}
       ---
 
       Suggested Action Items (JSON array of strings):
@@ -331,8 +357,9 @@ export async function scanTranscriptsForActionItemsAction(
     // 7. Prepare ActionItem objects
     const itemsToCreate = suggestedDescriptions.map(description => ({
       dealId,
+      transcriptId: transcriptId, // Link to the specific transcript
       description,
-      userId: session.user!.id!, // session.user.id is confirmed not null at the start
+      userId: session.user!.id!, 
       isAISuggested: true,
     }));
 
@@ -346,10 +373,10 @@ export async function scanTranscriptsForActionItemsAction(
     return { success: true, newItems: newActionItems, count: newActionItems.length };
 
   } catch (error) {
-    console.error('Error in scanTranscriptsForActionItemsAction:', error);
+    console.error('Error in scanSingleTranscriptForActionItemsAction:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to scan transcripts for action items.',
+      error: error instanceof Error ? error.message : 'Failed to scan transcript for action items.',
     };
   }
 }

@@ -230,6 +230,7 @@ export type DealContact = InferSelectModel<typeof dealContact>;
 export const actionItem = pgTable('ActionItem', {
   id: uuid('id').primaryKey().notNull().defaultRandom(),
   dealId: uuid('dealId').notNull().references(() => deal.id, { onDelete: 'cascade' }),
+  transcriptId: uuid('transcriptId').references(() => transcript.id, { onDelete: 'set null' }), // New field
   description: text('description').notNull(),
   isCompleted: boolean('isCompleted').notNull().default(false),
   isAISuggested: boolean('isAISuggested').notNull().default(false),

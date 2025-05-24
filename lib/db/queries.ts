@@ -954,6 +954,7 @@ export async function removeContactFromDealQuery({ dealId, contactId }: { dealId
 
 export async function createActionItem(input: {
   dealId: string;
+  transcriptId?: string | null; // Added transcriptId
   description: string;
   userId: string;
   isAISuggested?: boolean;
@@ -963,6 +964,7 @@ export async function createActionItem(input: {
       .insert(actionItem)
       .values({
         dealId: input.dealId,
+        transcriptId: input.transcriptId, // Added transcriptId
         description: input.description,
         userId: input.userId,
         isAISuggested: input.isAISuggested ?? false,
@@ -1006,6 +1008,46 @@ export async function getActionItemsByDealId({
   } catch (error) {
     console.error("Error in getActionItemsByDealId:", error);
     throw new ChatSDKError('bad_request:database', 'Failed to get action items for deal');
+  }
+}
+
+export async function getActionItemsByTranscriptId({
+  transcriptId,
+  userId,
+}: {
+  transcriptId: string;
+  userId: string;
+}): Promise<ActionItem[]> {
+  try {
+    // First, get the transcript to find its dealId
+    const [selectedTranscript] = await db
+      .select({ dealId: transcript.dealId })
+      .from(transcript)
+      .where(eq(transcript.id, transcriptId));
+
+    if (!selectedTranscript) {
+      console.warn(`Transcript with id ${transcriptId} not found.`);
+      return []; // Or throw an error
+    }
+
+    // Verify the user has access to the deal associated with the transcript
+    const dealCheck = await findDealByIdAndUserId({ dealId: selectedTranscript.dealId, userId });
+    if (!dealCheck) {
+      console.warn(`User ${userId} attempted to access action items for transcript ${transcriptId} (deal ${selectedTranscript.dealId}) without permission.`);
+      return [];
+    }
+
+    // Fetch action items for the specific transcriptId
+    const items = await db
+      .select()
+      .from(actionItem)
+      .where(and(eq(actionItem.transcriptId, transcriptId), eq(actionItem.dealId, selectedTranscript.dealId))) // Ensure dealId also matches for integrity
+      .orderBy(asc(actionItem.createdAt));
+
+    return items;
+  } catch (error) {
+    console.error("Error in getActionItemsByTranscriptId:", error);
+    throw new ChatSDKError('bad_request:database', 'Failed to get action items for transcript');
   }
 }
 
@@ -1089,6 +1131,7 @@ export async function deleteActionItem(
 export async function createMultipleActionItems(
   itemsData: Array<{
     dealId: string;
+    transcriptId?: string | null; // Added transcriptId
     description: string;
     userId: string;
     isAISuggested?: boolean;
@@ -1100,6 +1143,7 @@ export async function createMultipleActionItems(
   try {
     const valuesToInsert = itemsData.map(item => ({
       dealId: item.dealId,
+      transcriptId: item.transcriptId, // Added transcriptId
       description: item.description,
       userId: item.userId,
       isAISuggested: item.isAISuggested ?? false,

@@ -42,8 +42,8 @@ export default async function DealDetailPage({ params }: DealDetailPageProps) {
       {/* Contacts Section */}
       <DealContactsSection dealId={deal.id} />
 
-      {/* Action Items Section */}
-      <ActionItemsSection dealId={deal.id} />
+      {/* Action Items Section - Deprecated: Action items are now managed per transcript */}
+      {/* <ActionItemsSection dealId={deal.id} /> */}
     </div>
   );
 }

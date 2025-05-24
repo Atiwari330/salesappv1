@@ -15,7 +15,8 @@ import { uploadTranscript, deleteTranscriptAction } from './actions'; // Import 
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import type { Transcript } from '@/lib/db/schema';
-import { Trash2 } from 'lucide-react'; // Import Trash2 icon
+import { Trash2, Eye } from 'lucide-react'; // Import Trash2 icon, Eye for View Details
+import Link from 'next/link'; // Import Link for navigation
 import {
   AlertDialog,
   AlertDialogAction,
@@ -214,9 +215,14 @@ export function TranscriptSection({ dealName, dealId, initialTranscripts }: Tran
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex justify-end space-x-2">
-                <Button variant="outline" size="sm" onClick={() => handleViewTranscript(transcript)}>
-                  View Transcript
-                </Button>
+                {/* <Button variant="outline" size="sm" onClick={() => handleViewTranscript(transcript)}>
+                  View Transcript (Modal) 
+                </Button> */}
+                <Link href={`/deals/${dealId}/transcripts/${transcript.id}`} passHref>
+                  <Button variant="outline" size="sm" asChild>
+                    <span><Eye className="mr-2 h-4 w-4" /> View Details</span>
+                  </Button>
+                </Link>
                 <Button 
                   variant="outline" 
                   size="sm" 

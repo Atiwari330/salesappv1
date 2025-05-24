@@ -34,10 +34,11 @@ _ And the database migrations are successfully generated and applied.
 _ **Dependencies:** None
 _ **Priority:** High
 _ **AI Builder Checklist:**
-_ `[ ]` Read `lib/db/schema.ts`.
-_ `[ ]` Modify `actionItem` table definition.
-_ `[ ]` Generate database migration files (e.g., using Drizzle Kit: `pnpm drizzle-kit generate:pg`).
-_ `[ ]` Apply migrations (e.g., `pnpm drizzle-kit push:pg` or custom migration script). \* `[ ]` Verify schema changes in the database.
+_ `[x]` Read `lib/db/schema.ts`.
+_ `[x]` Modify `actionItem` table definition.
+_ `[x]` Generate database migration files (e.g., using Drizzle Kit: `pnpm drizzle-kit generate`).
+_ `[x]` Apply migrations (e.g., `pnpm drizzle-kit migrate`).
+\_ `[x]` Verify schema changes in the database.
 
 **2. User Story: Update Server Actions for Action Item Creation/Retrieval**
 _ **ID:** BE-001
@@ -55,11 +56,11 @@ _ Then any generated action items are saved with the corresponding `transcriptId
 _ **Dependencies:** DB-001
 _ **Priority:** High
 _ **AI Builder Checklist:**
-_ `[ ]` Read `app/(main)/deals/[dealId]/actions.ts` and relevant query files (e.g., `lib/db/queries.ts`).
-_ `[ ]` Modify `addUserActionItemAction` to accept and store `transcriptId`.
-_ `[ ]` Create `getActionItemsForTranscriptAction` (or modify existing ones) to filter by `transcriptId`.
-_ `[ ]` Refactor `scanTranscriptsForActionItemsAction` to `scanSingleTranscriptForActionItemsAction(transcriptId: string, dealId: string)` and ensure it links new AI items to the `transcriptId`.
-_ `[ ]` Update any calls to these actions if their signatures change.
+_ `[x]` Read `app/(main)/deals/[dealId]/actions.ts` and relevant query files (e.g., `lib/db/queries.ts`).
+_ `[x]` Modify `addUserActionItemAction` to accept and store `transcriptId`.
+_ `[x]` Create `getActionItemsForTranscriptAction` (or modify existing ones) to filter by `transcriptId`.
+_ `[x]` Refactor `scanTranscriptsForActionItemsAction` to `scanSingleTranscriptForActionItemsAction(dealId: string, transcriptId: string)` and ensure it links new AI items to the `transcriptId`.
+_ `[x]` Update any calls to these actions if their signatures change.
 
 **3. User Story: Establish Routing for Dedicated Transcript Page**
 _ **ID:** FE-001
@@ -71,9 +72,9 @@ _ Then a new page component is rendered.
 _ **Dependencies:** None
 _ **Priority:** High
 _ **AI Builder Checklist:**
-_ `[ ]` Create new directory structure: `app/(main)/deals/[dealId]/transcripts/[transcriptId]/`.
-_ `[ ]` Create `page.tsx` within this new directory.
-_ `[ ]` Implement a basic placeholder component in the new `page.tsx`.
+_ `[x]` Create new directory structure: `app/(main)/deals/[dealId]/transcripts/[transcriptId]/`.
+_ `[x]` Create `page.tsx` within this new directory.
+_ `[x]` Implement a basic placeholder component in the new `page.tsx`.
 
 ---
 
@@ -92,10 +93,11 @@ _ And the transcript's file name and call date/time are displayed.
 _ **Dependencies:** FE-001, (Implicitly) BE-001 (for fetching transcript data if not already available via existing queries).
 _ **Priority:** High
 _ **AI Builder Checklist:**
-_ `[ ]` Read the new `page.tsx` for the transcript detail page.
-_ `[ ]` Read `lib/db/queries.ts` to identify or create a function to fetch a single transcript by ID (e.g., `getTranscriptById`).
-_ `[ ]` Implement data fetching in the transcript detail page component.
-_ `[ ]` Design and implement the UI to display transcript metadata and content. \* `[ ]` ⏸️ **HUMAN TEST POINT:** Verify transcript content and metadata display correctly and legibly.
+_ `[x]` Read the new `page.tsx` for the transcript detail page.
+_ `[x]` Read `lib/db/queries.ts` to identify or create a function to fetch a single transcript by ID (e.g., `getTranscriptById`).
+_ `[x]` Implement data fetching in the transcript detail page component.
+_ `[x]` Design and implement the UI to display transcript metadata and content.
+\_ `[x]` ⏸️ **HUMAN TEST POINT:** Verify transcript content and metadata display correctly and legibly.
 
 **5. User Story: List Transcript-Specific Action Items**
 _ **ID:** FE-003
@@ -109,11 +111,11 @@ _ And existing functionalities like toggling completion, editing, and deleting i
 _ **Dependencies:** DB-001, BE-001, FE-001
 _ **Priority:** High
 _ **AI Builder Checklist:**
-_ `[ ]` Read the transcript detail page component (`page.tsx`).
-_ `[ ]` Utilize `getActionItemsForTranscriptAction` (from BE-001) to fetch data.
-_ `[ ]` Adapt or reuse UI components from `ActionItemsSection.tsx` for displaying and managing these action items, ensuring all interactions (toggle, edit, delete) target items by their unique ID and correctly update the state for _this transcript's items only_.
-_ `[ ]` Ensure the `dealId` is still passed where necessary for context if action item components rely on it.
-_ `[ ]` ⏸️ **HUMAN TEST POINT:** Verify action items for the specific transcript are listed correctly. Test completion toggle, edit, and delete functionalities.
+_ `[x]` Read the transcript detail page component (`page.tsx`).
+_ `[x]` Utilize `getActionItemsForTranscriptAction` (from BE-001) to fetch data.
+_ `[x]` Adapt or reuse UI components from `ActionItemsSection.tsx` for displaying and managing these action items, ensuring all interactions (toggle, edit, delete) target items by their unique ID and correctly update the state for _this transcript's items only_.
+_ `[x]` Ensure the `dealId` is still passed where necessary for context if action item components rely on it.
+_ `[x]` ⏸️ **HUMAN TEST POINT:** Verify action items for the specific transcript are listed correctly. Test completion toggle, edit, and delete functionalities.
 
 ---
 
@@ -132,10 +134,11 @@ _ And the new action item appears in the list of action items for this transcrip
 _ **Dependencies:** FE-003
 _ **Priority:** High
 _ **AI Builder Checklist:**
-_ `[ ]` Read the transcript detail page component.
-_ `[ ]` Implement an "Add Action Item" button/form (can reuse/adapt UI from `ActionItemsSection.tsx`).
-_ `[ ]` Ensure the `addUserActionItemAction` is called with the correct `dealId` AND the current `transcriptId`.
-_ `[ ]` Update the local state to reflect the newly added action item. \* `[ ]` ⏸️ **HUMAN TEST POINT:** Verify manual addition of action items, ensuring they appear correctly and are linked to the current transcript.
+_ `[x]` Read the transcript detail page component.
+_ `[x]` Implement an "Add Action Item" button/form (can reuse/adapt UI from `ActionItemsSection.tsx`).
+_ `[x]` Ensure the `addUserActionItemAction` is called with the correct `dealId` AND the current `transcriptId`.
+_ `[x]` Update the local state to reflect the newly added action item.
+\_ `[x]` ⏸️ **HUMAN TEST POINT:** Verify manual addition of action items, ensuring they appear correctly and are linked to the current transcript.
 
 **7. User Story: Scan Current Transcript for AI-Suggested Action Items**
 _ **ID:** FE-005
@@ -149,11 +152,11 @@ _ And these new items appear in the action item list for this transcript, marked
 _ **Dependencies:** FE-003, BE-001
 _ **Priority:** High
 _ **AI Builder Checklist:**
-_ `[ ]` Read the transcript detail page component.
-_ `[ ]` Add a "Scan this Transcript for Suggestions" button.
-_ `[ ]` Wire the button to call `scanSingleTranscriptForActionItemsAction` with the current `transcriptId` and `dealId`.
-_ `[ ]` Handle the response and update the local list of action items.
-_ `[ ]` ⏸️ **HUMAN TEST POINT:** Verify AI scan functionality for a single transcript. Check that new items are added to the correct list and marked as AI-suggested.
+_ `[x]` Read the transcript detail page component.
+_ `[x]` Add a "Scan this Transcript for Suggestions" button.
+_ `[x]` Wire the button to call `scanSingleTranscriptForActionItemsAction` with the current `transcriptId` and `dealId`.
+_ `[x]` Handle the response and update the local list of action items.
+_ `[x]` ⏸️ **HUMAN TEST POINT:** Verify AI scan functionality for a single transcript. Check that new items are added to the correct list and marked as AI-suggested.
 
 ---
 
@@ -171,9 +174,10 @@ _ Then I am navigated to `/deals/[dealId]/transcripts/[transcriptId]` for that s
 _ **Dependencies:** FE-001
 _ **Priority:** Medium
 _ **AI Builder Checklist:**
-_ `[ ]` Read `app/(main)/deals/[dealId]/transcript-section.tsx`.
-_ `[ ]` Modify the rendering of each transcript item to be a link or have a button that navigates to the new dedicated page URL.
-_ `[ ]` Ensure `dealId` and `transcriptId` are correctly passed for navigation. \* `[ ]` ⏸️ **HUMAN TEST POINT:** Verify navigation from the deal page's transcript list to the dedicated transcript pages works correctly for multiple transcripts.
+_ `[x]` Read `app/(main)/deals/[dealId]/transcript-section.tsx`.
+_ `[x]` Modify the rendering of each transcript item to be a link or have a button that navigates to the new dedicated page URL.
+_ `[x]` Ensure `dealId` and `transcriptId` are correctly passed for navigation.
+\_ `[x]` ⏸️ **HUMAN TEST POINT:** Verify navigation from the deal page's transcript list to the dedicated transcript pages works correctly for multiple transcripts.
 
 **9. User Story: Deprecate/Remove Old Action Item Section from Main Deal Page (or Adapt)**
 _ **ID:** FE-007
@@ -186,10 +190,10 @@ _ And the "Scan for Suggestions" button on the main deal page (if it was part of
 _ **Dependencies:** All previous FE stories.
 _ **Priority:** Medium
 _ **AI Builder Checklist:**
-_ `[ ]` Read `app/(main)/deals/[dealId]/page.tsx`.
-_ `[ ]` Comment out or remove the `<ActionItemsSection dealId={deal.id} />` line.
-_ `[ ]` If any global "Add Action Item" or "Scan All Transcripts" functionality was part of it, ensure it's removed to align with the current focus.
-_ `[ ]` ⏸️ **HUMAN TEST POINT:** Verify the main deal page no longer shows the old, global action items section. Ensure the UI feels clean and directs users towards transcript-specific actions.
+_ `[x]` Read `app/(main)/deals/[dealId]/page.tsx`.
+_ `[x]` Comment out or remove the `<ActionItemsSection dealId={deal.id} />` line.
+_ `[x]` If any global "Add Action Item" or "Scan All Transcripts" functionality was part of it, ensure it's removed to align with the current focus.
+_ `[x]` ⏸️ **HUMAN TEST POINT:** Verify the main deal page no longer shows the old, global action items section. Ensure the UI feels clean and directs users towards transcript-specific actions.
 
 ---
 

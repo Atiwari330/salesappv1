@@ -33,18 +33,19 @@ import { Sparkle } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ActionItem } from '@/lib/db/schema';
 import { 
-  getActionItemsForDealAction, 
+  getActionItemsForTranscriptAction, 
   addUserActionItemAction, 
   updateUserActionItemAction, 
   deleteUserActionItemAction,
-  scanSingleTranscriptForActionItemsAction // Updated import
-} from './actions';
+  scanSingleTranscriptForActionItemsAction
+} from '../../actions'; // Corrected path for actions
 
-interface ActionItemsSectionProps {
-  dealId: string;
+interface TranscriptActionItemsClientProps {
+  transcriptId: string;
+  dealId: string; // dealId is needed for creating/scanning action items
 }
 
-export function ActionItemsSection({ dealId }: ActionItemsSectionProps) {
+export function TranscriptActionItemsClient({ transcriptId, dealId }: TranscriptActionItemsClientProps) {
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,35 +55,31 @@ export function ActionItemsSection({ dealId }: ActionItemsSectionProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
 
-  // State for editing
   const [editingItem, setEditingItem] = useState<ActionItem | null>(null);
   const [editDescription, setEditDescription] = useState('');
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
-  // State for deleting
   const [itemToDelete, setItemToDelete] = useState<ActionItem | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // State for scanning transcripts
   const [isScanning, setIsScanning] = useState(false);
 
-
   const fetchActionItems = async () => {
-    if (!dealId) return;
+    if (!transcriptId) return;
     setIsLoading(true);
     setError(null);
     try {
-      const result = await getActionItemsForDealAction(dealId);
+      const result = await getActionItemsForTranscriptAction(transcriptId);
       if (result.success && result.items) {
         setActionItems(result.items);
       } else {
-        setError(result.error || 'Failed to load action items.');
+        setError(result.error || 'Failed to load action items for this transcript.');
         setActionItems([]);
       }
     } catch (e) {
-      console.error('Error fetching action items:', e);
+      console.error('Error fetching transcript action items:', e);
       setError(e instanceof Error ? e.message : 'An unexpected error occurred.');
       setActionItems([]);
     } finally {
@@ -92,7 +89,7 @@ export function ActionItemsSection({ dealId }: ActionItemsSectionProps) {
 
   useEffect(() => {
     fetchActionItems();
-  }, [dealId]);
+  }, [transcriptId]);
 
   const handleAddSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -102,7 +99,8 @@ export function ActionItemsSection({ dealId }: ActionItemsSectionProps) {
     }
     setIsSubmitting(true);
     try {
-      const result = await addUserActionItemAction(dealId, newItemDescription.trim());
+      // Pass dealId and transcriptId
+      const result = await addUserActionItemAction(dealId, newItemDescription.trim(), transcriptId);
       if (result.success && result.actionItem) {
         toast.success('Action item added!');
         setActionItems(prev => [...prev, result.actionItem!]);
@@ -194,34 +192,47 @@ export function ActionItemsSection({ dealId }: ActionItemsSectionProps) {
     }
   };
 
-  const handleScanTranscripts = async () => {
-    // This button is part of the old deal-level action items section.
-    // The scan action now requires a specific transcriptId.
-    // This functionality will be available on the dedicated transcript page.
-    // For now, disable or indicate deprecation.
-    toast.info('Scanning for suggestions is now done on individual transcript pages.');
-    // setIsScanning(true); // Keep UI responsive if needed, or remove if button is disabled
-    // try {
-      // const result = await scanSingleTranscriptForActionItemsAction(dealId, /* needs transcriptId */);
-      // ...
-    // } catch (e) {
-      // ...
-    // } finally {
-      // setIsScanning(false);
-    // }
+  const handleScanThisTranscript = async () => {
+    if (!transcriptId || !dealId) {
+      toast.error('Transcript ID or Deal ID is missing. Cannot scan.');
+      return;
+    }
+    setIsScanning(true);
+    toast.info('Scanning this transcript for action items...');
+    try {
+      // Pass both dealId and transcriptId
+      const result = await scanSingleTranscriptForActionItemsAction(dealId, transcriptId);
+      if (result.success) {
+        if (result.newItems && result.newItems.length > 0) {
+          toast.success(`${result.newItems.length} new AI-suggested action item(s) added!`);
+          setActionItems(prevItems => [...prevItems, ...result.newItems!]);
+        } else if (result.error) { // Check for specific errors if any
+            toast.error(result.error);
+        }
+         else {
+          toast.info('No new action item suggestions found from this transcript.');
+        }
+      } else {
+        toast.error(result.error || 'Failed to scan transcript or add suggestions.');
+      }
+    } catch (e) {
+      console.error('Error scanning transcript:', e);
+      toast.error(e instanceof Error ? e.message : 'An unexpected error occurred during scan.');
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   if (isLoading) {
     return (
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Action Items</CardTitle>
+          <CardTitle>Action Items for this Transcript</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
           <Skeleton className="h-8 w-1/4 mb-2" />
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-3/4" />
         </CardContent>
       </Card>
     );
@@ -230,16 +241,16 @@ export function ActionItemsSection({ dealId }: ActionItemsSectionProps) {
   return (
     <Card className="mt-6">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Action Items</CardTitle>
+        <CardTitle>Action Items for this Transcript</CardTitle>
         <div className="flex items-center space-x-2">
           <Button
             size="sm"
             variant="outline"
-            onClick={handleScanTranscripts}
+            onClick={handleScanThisTranscript}
             disabled={isScanning || isLoading}
           >
             <Sparkle className="mr-2 h-4 w-4" />
-            {isScanning ? 'Scanning...' : 'Scan for Suggestions'}
+            {isScanning ? 'Scanning...' : 'Scan this Transcript'}
           </Button>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
@@ -247,9 +258,9 @@ export function ActionItemsSection({ dealId }: ActionItemsSectionProps) {
             </DialogTrigger>
             <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Action Item</DialogTitle>
+              <DialogTitle>Add New Action Item (for this transcript)</DialogTitle>
               <DialogDescription>
-                Enter the description for your new action item.
+                Enter the description for your new action item. It will be linked to this transcript.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleAddSubmit} className="space-y-4">
@@ -285,7 +296,7 @@ export function ActionItemsSection({ dealId }: ActionItemsSectionProps) {
         )}
         {actionItems.length === 0 && !error && (
           <p className="text-muted-foreground text-center py-4">
-            No action items yet.
+            No action items yet for this transcript.
           </p>
         )}
         {actionItems.length > 0 && (
@@ -321,7 +332,6 @@ export function ActionItemsSection({ dealId }: ActionItemsSectionProps) {
         )}
       </CardContent>
 
-      {/* Edit Dialog */}
       {editingItem && (
         <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
           if (!open) setEditingItem(null); 
@@ -358,7 +368,6 @@ export function ActionItemsSection({ dealId }: ActionItemsSectionProps) {
         </Dialog>
       )}
 
-      {/* Delete Confirmation Dialog */}
       {itemToDelete && (
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
           if (!open) setItemToDelete(null);
