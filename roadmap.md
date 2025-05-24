@@ -406,7 +406,7 @@ Dependencies: DEAL-06
 
 Feature 2.3: Edit Deals
 
-Story DEAL-08: Implement Inline Editing for Deal Name on Detail Page
+✅ Story DEAL-08: Implement Inline Editing for Deal Name on Detail Page
 
 As a User,
 
@@ -432,7 +432,7 @@ Dependencies: DEAL-07
 
 Feature 2.4: Delete Deals
 
-Story DEAL-09: Display "Delete Deal" Button on Deal Detail Page
+✅ Story DEAL-09: Display "Delete Deal" Button on Deal Detail Page
 
 As a User,
 
@@ -452,7 +452,7 @@ Priority: P3
 
 Dependencies: DEAL-07
 
-Story DEAL-10: Implement "Delete Deal" Confirmation Modal
+✅ Story DEAL-10: Implement "Delete Deal" Confirmation Modal
 
 As a User,
 
@@ -474,7 +474,7 @@ Priority: P3
 
 Dependencies: DEAL-09
 
-Story DEAL-11: Implement Deal Deletion Backend Logic
+✅ Story DEAL-11: Implement Deal Deletion Backend Logic
 
 As a User,
 
@@ -596,7 +596,7 @@ Dependencies: TRN-03
 
 Feature 3.2: View Transcripts
 
-Story TRN-05: Display List of Uploaded Transcripts on Deal Detail Page
+✅ Story TRN-05: Display List of Uploaded Transcripts on Deal Detail Page
 
 As a User,
 
@@ -620,7 +620,7 @@ Priority: P2
 
 Dependencies: TRN-04
 
-Story TRN-06: Update "Number of Transcripts" on Deals List Page
+✅ Story TRN-06: Update "Number of Transcripts" on Deals List Page
 
 As a User,
 
@@ -640,7 +640,7 @@ Priority: P3
 
 Dependencies: TRN-04, DEAL-05
 
-Story TRN-07: Display Transcript Viewer Modal/Page
+✅ Story TRN-07: Display Transcript Viewer Modal/Page
 
 As a User,
 
@@ -668,7 +668,7 @@ Dependencies: TRN-05
 
 Feature 3.3: Delete Transcripts
 
-Story TRN-08: Display "Delete Transcript" Button for Each Transcript
+✅ Story TRN-08: Display "Delete Transcript" Button for Each Transcript
 
 As a User,
 
@@ -688,7 +688,7 @@ Priority: P3
 
 Dependencies: TRN-05
 
-Story TRN-09: Implement "Delete Transcript" Confirmation Modal
+✅ Story TRN-09: Implement "Delete Transcript" Confirmation Modal
 
 As a User,
 
@@ -708,7 +708,7 @@ Priority: P3
 
 Dependencies: TRN-08
 
-Story TRN-10: Implement Transcript Deletion Backend Logic
+✅ Story TRN-10: Implement Transcript Deletion Backend Logic
 
 As a User,
 

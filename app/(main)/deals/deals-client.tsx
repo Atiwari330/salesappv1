@@ -11,13 +11,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { Deal } from '@/lib/db/schema';
+import type { DealWithTranscriptCount } from '@/lib/db/queries';
 import { createDeal } from './actions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 interface DealsClientProps {
-  deals: Deal[];
+  deals: DealWithTranscriptCount[]; // Changed Deal to DealWithTranscriptCount
 }
 
 export function DealsClient({ deals }: DealsClientProps) {
@@ -112,7 +112,7 @@ export function DealsClient({ deals }: DealsClientProps) {
                     <td className="p-4 text-muted-foreground">
                       {new Date(deal.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="p-4 text-muted-foreground">0</td>
+                    <td className="p-4 text-muted-foreground">{deal.transcriptCount}</td>
                   </tr>
                 ))}
               </tbody>

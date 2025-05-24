@@ -563,17 +563,44 @@ export async function createDeal({
   }
 }
 
-export async function getDealsByUserId({ userId }: { userId: string }) {
+import { sql } from 'drizzle-orm'; // Import sql
+
+// Define a type for the deal with transcript count
+export type DealWithTranscriptCount = Deal & { transcriptCount: number };
+
+export async function getDealsByUserId({ userId }: { userId: string }): Promise<DealWithTranscriptCount[]> {
   try {
-    return await db
-      .select()
+    // Subquery to count transcripts for each deal
+    const transcriptCountsSq = db
+      .select({
+        dealId: transcript.dealId,
+        // Ensure count returns a number, coalesce null to 0
+        transcriptCount: sql<number>`cast(count(${transcript.id}) as int)`.as('transcript_count'),
+      })
+      .from(transcript)
+      .groupBy(transcript.dealId)
+      .as('transcript_counts_sq');
+
+    const dealsWithCounts = await db
+      .select({
+        id: deal.id,
+        name: deal.name,
+        userId: deal.userId,
+        createdAt: deal.createdAt,
+        updatedAt: deal.updatedAt,
+        transcriptCount: sql<number>`coalesce(${transcriptCountsSq.transcriptCount}, 0)`.as('transcriptCount'),
+      })
       .from(deal)
+      .leftJoin(transcriptCountsSq, eq(deal.id, transcriptCountsSq.dealId))
       .where(eq(deal.userId, userId))
       .orderBy(desc(deal.createdAt));
+    
+    return dealsWithCounts as DealWithTranscriptCount[];
   } catch (error) {
+    console.error("Error in getDealsByUserId:", error);
     throw new ChatSDKError(
       'bad_request:database',
-      'Failed to get deals by user id',
+      'Failed to get deals by user id with transcript count',
     );
   }
 }
@@ -605,15 +632,33 @@ export async function updateDeal({
   }
 }
 
-export async function deleteDeal({ id }: { id: string }) {
+export async function deleteDealById({ dealId, userId }: { dealId: string; userId: string }) {
   try {
-    const [deletedDeal] = await db
-      .delete(deal)
-      .where(eq(deal.id, id))
-      .returning();
-    return deletedDeal;
+    return await db.transaction(async (tx) => {
+      // First, delete all transcripts associated with the deal
+      await tx.delete(transcript).where(eq(transcript.dealId, dealId));
+
+      // Then, delete the deal itself, ensuring the user owns it
+      const deletedDeals = await tx
+        .delete(deal)
+        .where(and(eq(deal.id, dealId), eq(deal.userId, userId)))
+        .returning();
+
+      if (deletedDeals.length === 0) {
+        // This could mean the deal didn't exist or the user didn't own it.
+        // The server action calling this should handle this as an authorization/not found error.
+        throw new Error('Deal not found or user not authorized to delete this deal.');
+      }
+      
+      return deletedDeals[0];
+    });
   } catch (error) {
-    throw new ChatSDKError('bad_request:database', 'Failed to delete deal');
+    console.error("Error in deleteDealById:", error);
+    // Re-throw the original error or a new ChatSDKError
+    if (error instanceof ChatSDKError) {
+      throw error;
+    }
+    throw new ChatSDKError('bad_request:database', 'Failed to delete deal and associated transcripts');
   }
 }
 
