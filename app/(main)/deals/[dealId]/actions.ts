@@ -1,10 +1,10 @@
 'use server';
 
 import { auth } from '@/app/(auth)/auth';
-import { 
-  createTranscript, 
-  updateDeal, 
-  getDealById, 
+import {
+  createTranscript,
+  updateDeal,
+  getDealById,
   deleteDealById,
   deleteTranscript as deleteTranscriptQuery, // Renamed to avoid conflict
   getTranscriptById,
@@ -16,8 +16,10 @@ import {
   getActionItemById, // Added for deleting action items
   getActionItemsByDealId, // Added for fetching action items
   getActionItemsByTranscriptId // Added for transcript-specific items
-} from '@/lib/db/queries'; 
+} from '@/lib/db/queries';
 import type { ActionItem, Transcript } from '@/lib/db/schema'; // Import ActionItem & Transcript types from schema
+// Story 2.2.3: Ensure formatDealContextForLLM is imported
+import { getDealAIContext, formatDealContextForLLM } from '@/lib/ai/deal_context_builder';
 import { myProvider } from '@/lib/ai/providers'; // Added for LLM
 import { generateText } from 'ai'; // Added for LLM
 import { redirect } from 'next/navigation';
@@ -25,7 +27,7 @@ import { revalidatePath } from 'next/cache';
 
 export async function uploadTranscript(formData: FormData) {
   const session = await auth();
-  
+
   if (!session?.user?.id) {
     redirect('/login');
   }
@@ -47,7 +49,7 @@ export async function uploadTranscript(formData: FormData) {
 
     // Read file content
     const content = await file.text();
-    
+
     if (!content.trim()) {
       throw new Error('File appears to be empty');
     }
@@ -64,8 +66,8 @@ export async function uploadTranscript(formData: FormData) {
     return { success: true, transcript };
   } catch (error) {
     console.error('Upload error:', error);
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: error instanceof Error ? error.message : 'Failed to upload transcript'
     };
   }
@@ -227,7 +229,7 @@ export async function deleteUserActionItemAction(
     // by checking if the user owns the deal associated with the action item.
     // It also needs the dealId for revalidation, so we fetch the item first.
     const itemToDelete = await getActionItemById(itemId); // Assuming a getActionItemById query exists or will be added
-    
+
     if (!itemToDelete) {
         return { success: false, error: 'Action item not found.' };
     }
@@ -348,10 +350,10 @@ export async function scanSingleTranscriptForActionItemsAction( // Renamed and a
          suggestedDescriptions = [cleanedSuggestions.trim()];
       }
     }
-    
+
     if (suggestedDescriptions.length === 0) {
       // No error string here, client will inform based on count/empty array
-      return { success: true, newItems: [], count: 0 }; 
+      return { success: true, newItems: [], count: 0 };
     }
 
     // 7. Prepare ActionItem objects
@@ -359,7 +361,7 @@ export async function scanSingleTranscriptForActionItemsAction( // Renamed and a
       dealId,
       transcriptId: transcriptId, // Link to the specific transcript
       description,
-      userId: session.user!.id!, 
+      userId: session.user!.id!,
       isAISuggested: true,
     }));
 
@@ -391,29 +393,51 @@ export async function draftFollowUpEmailAction(transcriptId: string) {
   }
 
   try {
-    const transcript = await getTranscriptById({ id: transcriptId });
+    const initialTranscript = await getTranscriptById({ id: transcriptId });
 
-    if (!transcript) {
+    if (!initialTranscript) {
       return { success: false, error: 'Transcript not found.' };
     }
-
-    if (!transcript.content || transcript.content.trim() === '') {
+    if (!initialTranscript.content || initialTranscript.content.trim() === '') {
       return { success: false, error: 'Transcript content is empty.' };
     }
+
+    // Fetch the full deal context, ensuring this specific transcript is included.
+    // The dealId is derived from the initialTranscript for the getDealAIContext call.
+    const dealAIContext = await getDealAIContext({
+      dealId: initialTranscript.dealId,
+      userId: session.user.id,
+      transcriptIds: [transcriptId], // Focus on this transcript
+      includeContacts: true,         // Include contacts for email context
+      includeActionItems: true,      // Include action items for email context
+      includeTranscripts: true       // Ensure transcripts (at least this one) are included
+    });
+
+    if (!dealAIContext) {
+      return { 
+        success: false, 
+        error: 'Failed to retrieve comprehensive deal context for drafting email. User might be unauthorized or deal not found.' 
+      };
+    }
+
+    // Format the comprehensive context for the LLM
+    // We want full details for email drafting.
+    const formattedLLMContext = formatDealContextForLLM(dealAIContext, {
+      transcriptFormat: 'full', // Ensure full content for the specified transcript
+      includeSections: ['deal', 'contacts', 'transcripts', 'actionItems']
+    });
     
-    // Verify the user owns the deal associated with this transcript
-    const deal = await getDealById({ id: transcript.dealId });
-    if (!deal || deal.userId !== session.user.id) {
-      return { success: false, error: 'Unauthorized to access this transcript.' };
+    if (!formattedLLMContext || formattedLLMContext.startsWith('Error:')) {
+      return { success: false, error: formattedLLMContext || 'Failed to format deal context for LLM.' };
     }
 
     const prompt = `
       Role: You are an expert email writer for sales professionals.
       Goal: Draft a concise and actionable follow-up email to keep momentum going with a prospect after a sales call.
-      Context: The following is a transcript of the sales call.
-      Transcript:
+      Context: You are given the following comprehensive deal context, which includes details about the deal, associated contacts, relevant transcripts (specifically focusing on the one with ID ${transcriptId}), and action items.
+      Deal Context:
       ---
-      ${transcript.content}
+      ${formattedLLMContext}
       ---
       Instructions:
       - Keep the email brief and to the point.
@@ -469,7 +493,7 @@ export async function updateDealName(dealId: string, newName: string) {
     }
 
     const updatedDeals = await updateDeal({ id: dealId, name: newName.trim() }); // Changed to use updateDeal
-    
+
     if (updatedDeals.length === 0) {
       return { success: false, error: 'Failed to update deal name in database.' };
     }
@@ -492,7 +516,7 @@ export async function deleteDeal(dealId: string) {
   if (!session?.user?.id) {
     // Not strictly necessary to return an error object here if redirecting,
     // but can be useful if called from a context that handles the return value.
-    // redirect('/login'); 
+    // redirect('/login');
     return { success: false, error: 'Unauthorized' };
   }
 
@@ -521,7 +545,7 @@ export async function deleteDeal(dealId: string) {
 
   // If try block completes without error, redirect.
   // This ensures redirect only happens on successful deletion and revalidation.
-  redirect('/deals'); 
+  redirect('/deals');
   // Note: redirect() throws an error, so code after it won't execute.
   // For clarity, you might return a success object if not redirecting,
   // but since redirect is the goal, this is fine.
@@ -571,32 +595,57 @@ export async function deleteTranscriptAction(transcriptId: string, dealId: strin
  * @returns An object with `success: true` and the `answer`, or `success: false` and an `error` message.
  */
 export async function answerTranscriptQuestionAction(
-  allTranscriptsContent: string,
-  userQuestion: string
+  dealId: string, // Changed from allTranscriptsContent
+  userQuestion: string,
 ): Promise<{ success: boolean; answer?: string; error?: string }> {
   const session = await auth();
   if (!session?.user?.id) {
     return { success: false, error: 'Unauthorized. Please log in.' };
   }
 
-  if (!allTranscriptsContent.trim() || !userQuestion.trim()) {
-    return { success: false, error: 'Transcript content and question cannot be empty.' };
+  if (!dealId.trim() || !userQuestion.trim()) {
+    return { success: false, error: 'Deal ID and question cannot be empty.' };
   }
 
-  const prompt = `
-You are an AI assistant. Your task is to answer the following question based *solely* on the provided "Transcript Context" below.
-Do not use any external knowledge or make assumptions beyond what is explicitly stated in the transcripts.
-If the answer cannot be found in the provided transcripts, you MUST respond with: "The answer cannot be found in the provided transcripts."
+  try {
+    // Story 2.2.2: Call getDealAIContext
+    const dealAIContext = await getDealAIContext({
+      dealId,
+      userId: session.user.id,
+      // For now, fetch all components by default
+      includeContacts: true,
+      includeActionItems: true,
+      includeTranscripts: true,
+    });
 
-Transcript Context:
+    if (!dealAIContext) {
+      return {
+        success: false,
+        error: 'Failed to retrieve deal context. The deal may not exist or you may not have permission to access it.',
+      };
+    }
+
+    // Story 2.2.3: Integrate formatDealContextForLLM
+    const formattedLLMContext = formatDealContextForLLM(dealAIContext);
+
+    // If the formatted context is empty or indicates an error (e.g., from formatDealContextForLLM itself)
+    if (!formattedLLMContext || formattedLLMContext.startsWith('Error:')) {
+        return { success: false, error: formattedLLMContext || 'Failed to format deal context for LLM.' };
+    }
+
+    const prompt = `
+You are an AI assistant. Your task is to answer the following question based *solely* on the provided "Deal Context" below.
+Do not use any external knowledge or make assumptions beyond what is explicitly stated in the context.
+If the answer cannot be found in the provided context, you MUST respond with: "The answer cannot be found in the provided context."
+
+Deal Context:
 ---
-${allTranscriptsContent}
+${formattedLLMContext}
 ---
 
 User Question: ${userQuestion}
   `;
 
-  try {
     const { text: answer } = await generateText({
       model: myProvider.languageModel('chat-model'),
       prompt: prompt,
@@ -609,13 +658,12 @@ User Question: ${userQuestion}
     return { success: true, answer: answer.trim() };
   } catch (error) {
     console.error('Error in answerTranscriptQuestionAction LLM call:', error);
-    // Check for specific error types if needed, e.g., API key issues
     if (error instanceof Error && error.message.includes('authentication')) {
       return { success: false, error: 'LLM authentication failed. Please check your API key configuration.' };
     }
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'An unexpected error occurred while trying to get an answer.' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'An unexpected error occurred while trying to get an answer.'
     };
   }
 }

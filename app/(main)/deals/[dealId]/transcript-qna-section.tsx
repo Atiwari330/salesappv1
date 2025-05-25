@@ -31,29 +31,23 @@ export function TranscriptQnASection({ initialTranscripts, dealId }: TranscriptQ
     setError(null);
 
     try {
-      let allTranscriptsContent = '';
-      for (const transcript of initialTranscripts) {
-        const callDateFormatted = transcript.callDate 
-          ? new Date(transcript.callDate).toLocaleDateString() 
-          : 'N/A';
-        const callTimeFormatted = transcript.callTime || 'N/A';
-        
-        allTranscriptsContent += `--- START OF TRANSCRIPT ---\n`;
-        allTranscriptsContent += `File Name: ${transcript.fileName || 'N/A'}\n`;
-        allTranscriptsContent += `Call Date: ${callDateFormatted}\n`;
-        allTranscriptsContent += `Call Time: ${callTimeFormatted}\n\n`;
-        allTranscriptsContent += `${transcript.content}\n`;
-        allTranscriptsContent += `--- END OF TRANSCRIPT ---\n\n`;
-      }
-
-      if (!allTranscriptsContent.trim()) {
-        toast.error('No transcript content available to ask questions about.');
-        setError('No transcript content available.'); // Also set local error state
+      // Context preparation is now handled by the server action via getDealAIContext
+      // The client only needs to pass the dealId and the question.
+      
+      // Ensure initialTranscripts are available if we still want a client-side check,
+      // though the server action will now fetch them.
+      // For this refactoring, the primary check for "no content" will effectively
+      // be handled by the server action if getDealAIContext returns null or empty transcripts.
+      if (!initialTranscripts || initialTranscripts.length === 0) {
+        // This check can remain as a quick client-side guard,
+        // though the server action is the source of truth for context.
+        toast.error('No transcripts available for this deal to ask questions about.');
+        setError('No transcripts available for this deal.');
         setIsLoading(false);
         return;
       }
-      
-      const result = await answerTranscriptQuestionAction(allTranscriptsContent, question);
+
+      const result = await answerTranscriptQuestionAction(dealId, question);
 
       if (result.success && result.answer) {
         setAnswer(result.answer);

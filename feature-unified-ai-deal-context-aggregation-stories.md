@@ -66,7 +66,7 @@ These stories are critical to execute before starting development on the core fe
 
 **Feature 1.1: Core `DealAIContext` Type Definitions**
 
-- [ ] **Story 1.1.1: Define `DealAIContext` and `DealAIContextParams` Interfaces**
+- [x] **Story 1.1.1: Define `DealAIContext` and `DealAIContextParams` Interfaces**
   - **As a Developer,** I want to define the `DealAIContext` and `DealAIContextParams` TypeScript interfaces in a new file (e.g., `lib/ai/deal_context_types.ts`), **so that** there's a clear, typed contract for the structure of the aggregated deal context and the parameters for requesting it.
   - **Acceptance Criteria:**
     - Given the need for structured deal context.
@@ -78,7 +78,7 @@ These stories are critical to execute before starting development on the core fe
 
 **Feature 1.2: Initial `DealContextBuilder` Service Implementation**
 
-- [ ] **Story 1.2.1: Implement `getDealAIContext` Skeleton and Authorization**
+- [x] **Story 1.2.1: Implement `getDealAIContext` Skeleton and Authorization**
 
   - **As a Developer,** I want to create the `deal_context_builder.ts` file and implement the basic skeleton for the `getDealAIContext(params: DealAIContextParams)` function, including an initial authorization check, **so that** the foundation for the context aggregation service is in place and secure.
   - **Acceptance Criteria:**
@@ -91,7 +91,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P1 (Highest)
   - **Dependencies:** Story 1.1.1
 
-- [ ] **Story 1.2.2: Integrate Fetching `Deal` Details**
+- [x] **Story 1.2.2: Integrate Fetching `Deal` Details**
 
   - **As a Developer,** I want to integrate the fetching of core `Deal` details into the `getDealAIContext` function, **so that** the basic deal information is part of the aggregated context.
   - **Acceptance Criteria:**
@@ -102,7 +102,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P1 (Highest)
   - **Dependencies:** Story 1.2.1
 
-- [ ] **Story 1.2.3: Integrate Fetching All `Transcript` Details**
+- [x] **Story 1.2.3: Integrate Fetching All `Transcript` Details**
 
   - **As a Developer,** I want to integrate the fetching of all `Transcript` details associated with the deal into `getDealAIContext`, **so that** all transcript data is available in the aggregated context.
   - **Acceptance Criteria:**
@@ -113,7 +113,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P1 (Highest)
   - **Dependencies:** Story 1.2.1
 
-- [ ] **Story 1.2.4: Integrate Fetching `ContactWithRole` Details**
+- [x] **Story 1.2.4: Integrate Fetching `ContactWithRole` Details**
 
   - **As a Developer,** I want to integrate the fetching of all `ContactWithRole` details associated with the deal into `getDealAIContext`, **so that** contact information is part of the aggregated context.
   - **Acceptance Criteria:**
@@ -124,7 +124,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P1 (Highest)
   - **Dependencies:** Story 1.2.1
 
-- [ ] **Story 1.2.5: Integrate Fetching `ActionItem` Details**
+- [x] **Story 1.2.5: Integrate Fetching `ActionItem` Details**
 
   - **As a Developer,** I want to integrate the fetching of all `ActionItem` details associated with the deal into `getDealAIContext`, **so that** action item data is available in the aggregated context.
   - **Acceptance Criteria:**
@@ -135,7 +135,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P1 (Highest)
   - **Dependencies:** Story 1.2.1
 
-- [ ] **Story 1.2.6: Assemble and Return Full `DealAIContext`**
+- [x] **Story 1.2.6: Assemble and Return Full `DealAIContext`**
   - **As a Developer,** I want `getDealAIContext` to correctly assemble and return the complete `DealAIContext` object containing all fetched data (deal, transcripts, contacts, action items), **so that** a comprehensive context object is available for further processing.
   - **Acceptance Criteria:**
     - Given successful completion of stories 1.2.2, 1.2.3, 1.2.4, and 1.2.5.
@@ -151,7 +151,7 @@ These stories are critical to execute before starting development on the core fe
 
 **Feature 2.1: Basic LLM Context Formatter**
 
-- [ ] **Story 2.1.1: Implement `formatDealContextForLLM` Skeleton**
+- [x] **Story 2.1.1: Implement `formatDealContextForLLM` Skeleton**
 
   - **As a Developer,** I want to implement the skeleton for the `formatDealContextForLLM(context: DealAIContext, options?: {...})` function within `deal_context_builder.ts`, **so that** there's a dedicated function to convert the structured context object into an LLM-friendly string.
   - **Acceptance Criteria:**
@@ -163,7 +163,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P1 (Highest)
   - **Dependencies:** Story 1.1.1
 
-- [ ] **Story 2.1.2: Add `Deal` Details Formatting to `formatDealContextForLLM`**
+- [x] **Story 2.1.2: Add `Deal` Details Formatting to `formatDealContextForLLM`**
 
   - **As a Developer,** I want to add logic to `formatDealContextForLLM` to include formatted `Deal` details (e.g., name, ID, creation date) in the output string, **so that** basic deal information is presented to the LLM.
   - **Acceptance Criteria:**
@@ -173,7 +173,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P1 (Highest)
   - **Dependencies:** Story 2.1.1
 
-- [ ] **Story 2.1.3: Add `ContactWithRole` List Formatting to `formatDealContextForLLM`**
+- [x] **Story 2.1.3: Add `ContactWithRole` List Formatting to `formatDealContextForLLM`**
 
   - **As a Developer,** I want to add logic to `formatDealContextForLLM` to include a formatted list of `ContactWithRole` (e.g., name, role, email) in the output string, **so that** associated contacts are part of the LLM context.
   - **Acceptance Criteria:**
@@ -183,7 +183,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P1 (Highest)
   - **Dependencies:** Story 2.1.1
 
-- [ ] **Story 2.1.4: Add `Transcript` List Formatting with Basic Truncation to `formatDealContextForLLM`**
+- [x] **Story 2.1.4: Add `Transcript` List Formatting with Basic Truncation to `formatDealContextForLLM`**
 
   - **As a Developer,** I want to add logic to `formatDealContextForLLM` to include a formatted list of `Transcript` details (e.g., filename, call date, content snippet) with basic content truncation (e.g., first 500 chars), **so that** transcript information is presented to the LLM concisely.
   - **Acceptance Criteria:**
@@ -194,7 +194,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P1 (Highest)
   - **Dependencies:** Story 2.1.1
 
-- [ ] **Story 2.1.5: Add `ActionItem` List Formatting to `formatDealContextForLLM`**
+- [x] **Story 2.1.5: Add `ActionItem` List Formatting to `formatDealContextForLLM`**
   - **As a Developer,** I want to add logic to `formatDealContextForLLM` to include a formatted list of `ActionItem` details (e.g., description, status) in the output string, **so that** action items are part of the LLM context.
   - **Acceptance Criteria:**
     - Given `formatDealContextForLLM` function and a `DealAIContext` object with action items.
@@ -205,7 +205,7 @@ These stories are critical to execute before starting development on the core fe
 
 **Feature 2.2: Initial Integration with an Existing AI Feature**
 
-- [ ] **Story 2.2.1: Identify and Document Target AI Feature for Refactoring**
+- [x] **Story 2.2.1: Identify and Document Target AI Feature for Refactoring**
 
   - **As a Developer,** I want to identify one existing AI feature (e.g., backend for `transcript-qna-section.tsx` or `transcript-email-generator-client.tsx`) that currently fetches deal context disparately and document its current context gathering mechanism, **so that** it can be targeted for refactoring to use the new `DealContextBuilder`.
   - **Acceptance Criteria:**
@@ -215,7 +215,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P1 (Highest)
   - **Dependencies:** Story 0.3 (provides initial analysis)
 
-- [ ] **Story 2.2.2: Refactor Chosen AI Feature to Call `getDealAIContext`**
+- [x] **Story 2.2.2: Refactor Chosen AI Feature to Call `getDealAIContext`**
 
   - **As a Developer,** I want to refactor the backend logic of the chosen AI feature (from Story 2.2.1) to call the new `getDealAIContext` function instead of its previous data fetching methods, **so that** it utilizes the unified context aggregation service.
   - **Acceptance Criteria:**
@@ -226,7 +226,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P1 (Highest)
   - **Dependencies:** Story 1.2.6, Story 2.2.1
 
-- [ ] **Story 2.2.3: Integrate `formatDealContextForLLM` into Refactored AI Feature**
+- [x] **Story 2.2.3: Integrate `formatDealContextForLLM` into Refactored AI Feature**
 
   - **As a Developer,** I want to integrate the `formatDealContextForLLM` function into the refactored AI feature (from Story 2.2.2) to prepare the context string for the LLM, **so that** the LLM receives context in the new standardized format.
   - **Acceptance Criteria:**
@@ -237,7 +237,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P1 (Highest)
   - **Dependencies:** Story 2.1.5 (or completion of all 2.1.x stories), Story 2.2.2
 
-- [ ] **Story 2.2.4: Test Refactored AI Feature with New Context Builder**
+- [x] **Story 2.2.4: Test Refactored AI Feature with New Context Builder**
   - **As a Developer,** I want to thoroughly test the refactored AI feature, ensuring it functions correctly with the context provided by `DealContextBuilder` and `formatDealContextForLLM`, **so that** the initial integration is validated and performs as expected or better.
   - **Acceptance Criteria:**
     - Given the fully refactored AI feature.
@@ -270,7 +270,7 @@ These stories are critical to execute before starting development on the core fe
 
 **Feature 3.1: Advanced `DealAIContextParams` and Fetching Logic**
 
-- [ ] **Story 3.1.1: Add `transcriptIds` Param to `DealAIContextParams`**
+- [x] **Story 3.1.1: Add `transcriptIds` Param to `DealAIContextParams`**
 
   - **As a Developer,** I want to enhance `DealAIContextParams` to include an optional `transcriptIds` string array, **so that** specific transcripts can be requested for context, rather than always fetching all.
   - **Acceptance Criteria:**
@@ -280,7 +280,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P2 (Medium)
   - **Dependencies:** Story 1.1.1
 
-- [ ] **Story 3.1.2: Implement Fetching Specific Transcripts in `getDealAIContext`**
+- [x] **Story 3.1.2: Implement Fetching Specific Transcripts in `getDealAIContext`**
 
   - **As a Developer,** I want to update `getDealAIContext` to fetch only specified transcripts if `transcriptIds` is provided in `DealAIContextParams`, **so that** context is more targeted and efficient.
   - **Acceptance Criteria:**
@@ -290,7 +290,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P2 (Medium)
   - **Dependencies:** Story 3.1.1
 
-- [ ] **Story 3.1.3: Add `limitTranscripts` Param to `DealAIContextParams`**
+- [x] **Story 3.1.3: Add `limitTranscripts` Param to `DealAIContextParams`**
 
   - **As a Developer,** I want to enhance `DealAIContextParams` to include an optional `limitTranscripts` number, **so that** the maximum number of transcripts included in the context can be controlled.
   - **Acceptance Criteria:**
@@ -300,7 +300,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P2 (Medium)
   - **Dependencies:** Story 1.1.1
 
-- [ ] **Story 3.1.4: Implement Transcript Limiting in `getDealAIContext`**
+- [x] **Story 3.1.4: Implement Transcript Limiting in `getDealAIContext`**
 
   - **As a Developer,** I want to update `getDealAIContext` to limit the number of transcripts fetched/included based on the `limitTranscripts` param (e.g., newest N transcripts), **so that** token usage for LLMs can be better managed.
   - **Acceptance Criteria:**
@@ -310,7 +310,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P2 (Medium)
   - **Dependencies:** Story 3.1.3
 
-- [ ] **Story 3.1.5: Add Selective Inclusion Flags to `DealAIContextParams`**
+- [x] **Story 3.1.5: Add Selective Inclusion Flags to `DealAIContextParams`**
 
   - **As a Developer,** I want to enhance `DealAIContextParams` to include optional boolean flags (e.g., `includeContacts?: boolean`, `includeActionItems?: boolean`, `includeTranscripts?: boolean`), **so that** major sections of the context can be selectively included or excluded.
   - **Acceptance Criteria:**
@@ -320,7 +320,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P2 (Medium)
   - **Dependencies:** Story 1.1.1
 
-- [ ] **Story 3.1.6: Implement Selective Inclusion Logic in `getDealAIContext`**
+- [x] **Story 3.1.6: Implement Selective Inclusion Logic in `getDealAIContext`**
   - **As a Developer,** I want to update `getDealAIContext` to respect the selective inclusion flags from `DealAIContextParams`, fetching and including data only for sections marked as true (or default to true if flag not present), **so that** context can be tailored for specific AI tasks that may not need all data types.
   - **Acceptance Criteria:**
     - Given `getDealAIContext` and `DealAIContextParams` (from Story 3.1.5).
@@ -331,7 +331,7 @@ These stories are critical to execute before starting development on the core fe
 
 **Feature 3.2: Improved LLM Context Formatter**
 
-- [ ] **Story 3.2.1: Research Transcript Summarization Strategies (Spike)**
+- [x] **Story 3.2.1: Research Transcript Summarization Strategies (Spike)**
 
   - **As a Developer,** I want to research and document viable strategies for smarter transcript summarization or advanced truncation for LLM context (e.g., extractive summaries, abstractive summaries via a quick LLM call, key phrase extraction), **so that** token limits are managed effectively for very long transcripts while retaining maximal relevant information.
   - **Acceptance Criteria:**
@@ -341,7 +341,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P2 (Medium)
   - **Dependencies:** Story 2.1.4
 
-- [ ] **Story 3.2.2: Implement Chosen Transcript Summarization/Truncation Strategy**
+- [x] **Story 3.2.2: Implement Chosen Transcript Summarization/Truncation Strategy**
 
   - **As a Developer,** I want to implement the chosen strategy (from Story 3.2.1) for improved transcript summarization/truncation within `formatDealContextForLLM`, **so that** context from long transcripts is more concise yet useful for the LLM.
   - **Acceptance Criteria:**
@@ -351,7 +351,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P2 (Medium)
   - **Dependencies:** Story 3.2.1
 
-- [ ] **Story 3.2.3: Add Formatting `options` to `formatDealContextForLLM`**
+- [x] **Story 3.2.3: Add Formatting `options` to `formatDealContextForLLM`**
   - **As a Developer,** I want to add an `options` parameter to `formatDealContextForLLM` (e.g., `options: { transcriptFormat: 'summary' | 'full_truncated' | 'titles_only', includeSections: string[] }`), **so that** the output string format can be tailored by the calling AI feature based on its specific needs.
   - **Acceptance Criteria:**
     - Given `formatDealContextForLLM`.
@@ -362,7 +362,7 @@ These stories are critical to execute before starting development on the core fe
 
 **Feature 3.3: Refactor Other AI Features (Ongoing)**
 
-- [ ] **Story 3.3.1: Identify and Document Second AI Feature for Refactoring**
+- [x] **Story 3.3.1: Identify and Document Second AI Feature for Refactoring**
 
   - **As a Developer,** I want to identify and document a second existing AI feature that processes deal context, **so that** it can be scheduled for refactoring to use the `DealContextBuilder`.
   - **Acceptance Criteria:**
@@ -372,7 +372,7 @@ These stories are critical to execute before starting development on the core fe
   - **Priority:** P3 (Low for initial epic, becomes P2 as builder matures)
   - **Dependencies:** Completion of Phase 1 and 2.
 
-- [ ] **Story 3.3.2: Refactor Second AI Feature**
+- [x] **Story 3.3.2: Refactor Second AI Feature**
   - **As a Developer,** I want to refactor the second identified AI feature to use `DealContextBuilder` and `formatDealContextForLLM`, **so that** more of the application benefits from unified context aggregation.
   - **Acceptance Criteria:**
     - Given the identified feature and the mature `DealContextBuilder`.

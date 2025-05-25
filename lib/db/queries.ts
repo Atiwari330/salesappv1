@@ -738,6 +738,36 @@ export async function deleteTranscript({ id }: { id: string }) {
   }
 }
 
+export async function getTranscriptsByDealIdAndIds({
+  dealId,
+  transcriptIds,
+}: {
+  dealId: string;
+  transcriptIds: string[];
+}): Promise<Transcript[]> {
+  if (!transcriptIds || transcriptIds.length === 0) {
+    return [];
+  }
+  try {
+    return await db
+      .select()
+      .from(transcript)
+      .where(
+        and(
+          eq(transcript.dealId, dealId), // Ensure transcripts belong to the specified deal
+          inArray(transcript.id, transcriptIds),
+        ),
+      )
+      .orderBy(desc(transcript.createdAt)); // Or any other desired order
+  } catch (error) {
+    console.error('Error in getTranscriptsByDealIdAndIds:', error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to get specific transcripts by IDs for deal',
+    );
+  }
+}
+
 export async function getTranscriptCountByDealId({ dealId }: { dealId: string }) {
   try {
     const [stats] = await db
