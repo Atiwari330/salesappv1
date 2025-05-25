@@ -6,19 +6,50 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Transcript } from '@/lib/db/schema';
-import { answerTranscriptQuestionAction } from './actions'; // Will be used in the next step
-import { toast } from 'sonner'; // Will be used for error handling
+import { answerTranscriptQuestionAction } from './actions';
+import { useDealAIInteraction } from '@/lib/hooks/useDealAIInteraction'; // Import the hook
+import { toast } from 'sonner';
 
 interface TranscriptQnASectionProps {
-  initialTranscripts: Transcript[];
-  dealId: string; // Added dealId for potential future use, though not strictly needed for current plan
+  initialTranscripts: Transcript[]; // This can still be used for the initial guard message
+  dealId: string;
 }
+
+// Define the request and response types for this specific action
+interface AnswerRequestData {
+  dealId: string;
+  question: string;
+}
+
+interface AnswerResponsePayload {
+  answer: string; // Assuming answerTranscriptQuestionAction returns { success: boolean, answer?: string, error?: string }
+}
+
 
 export function TranscriptQnASection({ initialTranscripts, dealId }: TranscriptQnASectionProps) {
   const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  const {
+    data: answerData, // Contains { answer: string } on success
+    isLoading,
+    error,
+    execute: executeAskQuestion,
+    // reset, // Not explicitly used in this component's current logic, but available
+  } = useDealAIInteraction<AnswerRequestData, AnswerResponsePayload>({
+    action: async (params) => {
+      // The hook expects an action that takes a single requestData object.
+      // answerTranscriptQuestionAction takes (dealId, question)
+      // So we adapt it here.
+      const result = await answerTranscriptQuestionAction(params.dealId, params.question);
+      // The hook expects ServerActionResponse structure, so we ensure 'data' field is present on success
+      if (result.success && result.answer !== undefined) {
+        return { success: true, data: { answer: result.answer } };
+      }
+      return { success: false, error: result.error };
+    },
+    successMessage: 'Answer received!',
+    // onError and onSuccess can be added here if specific side-effects are needed beyond toast
+  });
 
   const handleAskQuestion = async () => {
     if (!question.trim()) {
@@ -26,45 +57,18 @@ export function TranscriptQnASection({ initialTranscripts, dealId }: TranscriptQ
       return;
     }
 
-    setIsLoading(true);
-    setAnswer(null);
-    setError(null);
-
-    try {
-      // Context preparation is now handled by the server action via getDealAIContext
-      // The client only needs to pass the dealId and the question.
-      
-      // Ensure initialTranscripts are available if we still want a client-side check,
-      // though the server action will now fetch them.
-      // For this refactoring, the primary check for "no content" will effectively
-      // be handled by the server action if getDealAIContext returns null or empty transcripts.
-      if (!initialTranscripts || initialTranscripts.length === 0) {
-        // This check can remain as a quick client-side guard,
-        // though the server action is the source of truth for context.
-        toast.error('No transcripts available for this deal to ask questions about.');
-        setError('No transcripts available for this deal.');
-        setIsLoading(false);
-        return;
-      }
-
-      const result = await answerTranscriptQuestionAction(dealId, question);
-
-      if (result.success && result.answer) {
-        setAnswer(result.answer);
-        // setQuestion(''); // Optionally clear the question input
-      } else {
-        const errorMessage = result.error || 'An unexpected error occurred.';
-        setError(errorMessage);
-        toast.error(errorMessage);
-      }
-    } catch (e) {
-      console.error('Failed to ask question:', e);
-      const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
+    // Client-side guard for no transcripts can remain
+    if (!initialTranscripts || initialTranscripts.length === 0) {
+      toast.error('No transcripts available for this deal to ask questions about.');
+      // The hook will set its own error state if the action fails,
+      // but this is a quick client-side feedback before calling the action.
+      // To be consistent, we might let the hook handle all errors,
+      // or set a local error for this specific pre-condition.
+      // For now, let's rely on the toast and not set the hook's error for this.
+      return;
     }
+    
+    executeAskQuestion({ dealId, question });
   };
 
   if (!initialTranscripts || initialTranscripts.length === 0) {
@@ -102,7 +106,6 @@ export function TranscriptQnASection({ initialTranscripts, dealId }: TranscriptQ
         {isLoading && (
           <div className="pt-4">
             <p className="text-muted-foreground">Thinking...</p>
-            {/* Consider adding a skeleton loader here for better UX */}
           </div>
         )}
 
@@ -112,11 +115,11 @@ export function TranscriptQnASection({ initialTranscripts, dealId }: TranscriptQ
           </div>
         )}
 
-        {answer && !isLoading && !error && (
+        {answerData?.answer && !isLoading && !error && (
           <div className="pt-4 space-y-2">
             <h3 className="font-semibold">Answer:</h3>
             <div className="prose dark:prose-invert max-w-none p-3 bg-muted rounded-md whitespace-pre-wrap">
-              {answer}
+              {answerData.answer}
             </div>
           </div>
         )}

@@ -17,11 +17,12 @@ import {
   getActionItemsByDealId, // Added for fetching action items
   getActionItemsByTranscriptId // Added for transcript-specific items
 } from '@/lib/db/queries';
-import type { ActionItem, Transcript } from '@/lib/db/schema'; // Import ActionItem & Transcript types from schema
-// Story 2.2.3: Ensure formatDealContextForLLM is imported
-import { getDealAIContext, formatDealContextForLLM } from '@/lib/ai/deal_context_builder';
-import { myProvider } from '@/lib/ai/providers'; // Added for LLM
-import { generateText } from 'ai'; // Added for LLM
+import type { ActionItem, Transcript, Deal } from '@/lib/db/schema'; // Import ActionItem & Transcript types from schema
+import { getDealAIContext, formatDealContextForLLM } from '@/lib/ai/deal_context_builder'; // Needed for other actions
+import { myProvider } from '@/lib/ai/providers'; // Needed for other actions
+import { generateText } from 'ai'; // Needed for other actions
+import { generateStandardizedAIDealResponse } from '@/lib/ai/utils'; // Import the new utility
+import type { DealAIContextParams, DealAIContext } from '@/lib/ai/deal_context_types'; // Import necessary types
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
@@ -329,13 +330,13 @@ export async function scanSingleTranscriptForActionItemsAction( // Renamed and a
     try {
       // Attempt to parse as JSON array
       const parsed = JSON.parse(cleanedSuggestions); // Use the cleaned string
-      if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
-        suggestedDescriptions = parsed.filter(desc => desc.trim().length > 0);
+      if (Array.isArray(parsed) && parsed.every((item): item is string => typeof item === 'string')) {
+        suggestedDescriptions = parsed.filter((desc: string) => desc.trim().length > 0);
       } else if (cleanedSuggestions.includes('\n') || cleanedSuggestions.includes('* ') || cleanedSuggestions.includes('- ')) {
         // Fallback: try to parse as a bulleted/newline-separated list (using cleanedSuggestions)
         suggestedDescriptions = cleanedSuggestions.split('\n')
-          .map(line => line.replace(/^[\s*-]+/, '').trim())
-          .filter(desc => desc.length > 0);
+          .map((line: string) => line.replace(/^[\s*-]+/, '').trim())
+          .filter((desc: string) => desc.length > 0);
       } else if (cleanedSuggestions.trim().toLowerCase() !== "no action items found." && cleanedSuggestions.trim() !== "") {
         // Fallback for a single action item not in a list
          suggestedDescriptions = [cleanedSuggestions.trim()];
@@ -344,8 +345,8 @@ export async function scanSingleTranscriptForActionItemsAction( // Renamed and a
       console.warn("LLM response for action items was not valid JSON even after cleaning, attempting further fallback parsing:", cleanedSuggestions, e);
        if (cleanedSuggestions.includes('\n') || cleanedSuggestions.includes('* ') || cleanedSuggestions.includes('- ')) {
         suggestedDescriptions = cleanedSuggestions.split('\n')
-          .map(line => line.replace(/^[\s*-]+/, '').trim())
-          .filter(desc => desc.length > 0);
+          .map((line: string) => line.replace(/^[\s*-]+/, '').trim())
+          .filter((desc: string) => desc.length > 0);
       } else if (cleanedSuggestions.trim().toLowerCase() !== "no action items found." && cleanedSuggestions.trim() !== "") {
          suggestedDescriptions = [cleanedSuggestions.trim()];
       }
@@ -384,11 +385,11 @@ export async function scanSingleTranscriptForActionItemsAction( // Renamed and a
 }
 
 
-export async function draftFollowUpEmailAction(transcriptId: string) {
+export async function draftFollowUpEmailAction(
+  transcriptId: string,
+): Promise<{ success: boolean; emailText?: string; error?: string }> {
   const session = await auth();
   if (!session?.user?.id) {
-    // In a real app, you might redirect or throw a specific auth error
-    // For now, returning an error object similar to other actions
     return { success: false, error: 'Unauthorized' };
   }
 
@@ -398,40 +399,24 @@ export async function draftFollowUpEmailAction(transcriptId: string) {
     if (!initialTranscript) {
       return { success: false, error: 'Transcript not found.' };
     }
-    if (!initialTranscript.content || initialTranscript.content.trim() === '') {
-      return { success: false, error: 'Transcript content is empty.' };
-    }
+    // No need to check content here, generateStandardizedAIDealResponse will handle if context is empty/invalid
 
-    // Fetch the full deal context, ensuring this specific transcript is included.
-    // The dealId is derived from the initialTranscript for the getDealAIContext call.
-    const dealAIContext = await getDealAIContext({
+    const dealContextParams: DealAIContextParams = {
       dealId: initialTranscript.dealId,
       userId: session.user.id,
       transcriptIds: [transcriptId], // Focus on this transcript
-      includeContacts: true,         // Include contacts for email context
-      includeActionItems: true,      // Include action items for email context
-      includeTranscripts: true       // Ensure transcripts (at least this one) are included
-    });
+      includeContacts: true,
+      includeActionItems: true,
+      includeTranscripts: true,
+    };
 
-    if (!dealAIContext) {
-      return { 
-        success: false, 
-        error: 'Failed to retrieve comprehensive deal context for drafting email. User might be unauthorized or deal not found.' 
-      };
-    }
-
-    // Format the comprehensive context for the LLM
-    // We want full details for email drafting.
-    const formattedLLMContext = formatDealContextForLLM(dealAIContext, {
+    const formatContextOptions: import('@/lib/ai/deal_context_types').FormatDealContextOptions = {
       transcriptFormat: 'full', // Ensure full content for the specified transcript
-      includeSections: ['deal', 'contacts', 'transcripts', 'actionItems']
-    });
-    
-    if (!formattedLLMContext || formattedLLMContext.startsWith('Error:')) {
-      return { success: false, error: formattedLLMContext || 'Failed to format deal context for LLM.' };
-    }
+      includeSections: ['deal', 'contacts', 'transcripts', 'actionItems'],
+    };
 
-    const prompt = `
+    const promptBuilder = (formattedLLMContext: string, rawDealAIContext?: DealAIContext): string => {
+      return `
       Role: You are an expert email writer for sales professionals.
       Goal: Draft a concise and actionable follow-up email to keep momentum going with a prospect after a sales call.
       Context: You are given the following comprehensive deal context, which includes details about the deal, associated contacts, relevant transcripts (specifically focusing on the one with ID ${transcriptId}), and action items.
@@ -447,24 +432,25 @@ export async function draftFollowUpEmailAction(transcriptId: string) {
       - Do not include a subject line, only the body of the email.
       - Do not include a generic greeting like "Dear [Prospect Name]," or a sign-off like "Best regards, [Your Name]". Focus solely on the email body content that would go between a greeting and a sign-off.
     `;
+    };
 
-    const { text: emailText } = await generateText({
-      model: myProvider.languageModel('chat-model'),
-      prompt: prompt,
+    const result = await generateStandardizedAIDealResponse({
+      dealContextParams,
+      formatContextOptions,
+      promptBuilder,
+      // model: myProvider.languageModel('chat-model'), // Default is chat-model
     });
 
-    if (!emailText || emailText.trim() === '') {
-      return { success: false, error: 'LLM failed to generate email content.' };
+    if (result.success && result.text) {
+      return { success: true, emailText: result.text };
+    } else {
+      return { success: false, error: result.error || 'LLM failed to generate email content.' };
     }
-
-    return { success: true, emailText };
 
   } catch (error) {
-    console.error('Draft follow-up email error:', error);
-    if (error instanceof Error && error.message.includes('authentication')) {
-      // Handle potential API key errors more specifically if needed
-      return { success: false, error: 'LLM authentication failed. Please check API key.' };
-    }
+    // This catch block is for errors outside generateStandardizedAIDealResponse,
+    // like getTranscriptById failing or other unexpected issues.
+    console.error('Unexpected error in draftFollowUpEmailAction:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to draft follow-up email.',
@@ -595,7 +581,7 @@ export async function deleteTranscriptAction(transcriptId: string, dealId: strin
  * @returns An object with `success: true` and the `answer`, or `success: false` and an `error` message.
  */
 export async function answerTranscriptQuestionAction(
-  dealId: string, // Changed from allTranscriptsContent
+  dealId: string,
   userQuestion: string,
 ): Promise<{ success: boolean; answer?: string; error?: string }> {
   const session = await auth();
@@ -607,33 +593,18 @@ export async function answerTranscriptQuestionAction(
     return { success: false, error: 'Deal ID and question cannot be empty.' };
   }
 
-  try {
-    // Story 2.2.2: Call getDealAIContext
-    const dealAIContext = await getDealAIContext({
-      dealId,
-      userId: session.user.id,
-      // For now, fetch all components by default
-      includeContacts: true,
-      includeActionItems: true,
-      includeTranscripts: true,
-    });
+  const dealContextParams: DealAIContextParams = {
+    dealId,
+    userId: session.user.id,
+    includeContacts: true, // Default includes, adjust if specific needs arise
+    includeActionItems: true,
+    includeTranscripts: true,
+  };
 
-    if (!dealAIContext) {
-      return {
-        success: false,
-        error: 'Failed to retrieve deal context. The deal may not exist or you may not have permission to access it.',
-      };
-    }
-
-    // Story 2.2.3: Integrate formatDealContextForLLM
-    const formattedLLMContext = formatDealContextForLLM(dealAIContext);
-
-    // If the formatted context is empty or indicates an error (e.g., from formatDealContextForLLM itself)
-    if (!formattedLLMContext || formattedLLMContext.startsWith('Error:')) {
-        return { success: false, error: formattedLLMContext || 'Failed to format deal context for LLM.' };
-    }
-
-    const prompt = `
+  const promptBuilder = (formattedLLMContext: string, rawDealAIContext?: DealAIContext): string => {
+    // Access deal name from rawDealAIContext if needed for the prompt, or rely on formattedLLMContext
+    // const dealName = rawDealAIContext?.deal?.name || 'the deal';
+    return `
 You are an AI assistant. Your task is to answer the following question based *solely* on the provided "Deal Context" below.
 Do not use any external knowledge or make assumptions beyond what is explicitly stated in the context.
 If the answer cannot be found in the provided context, you MUST respond with: "The answer cannot be found in the provided context."
@@ -644,26 +615,30 @@ ${formattedLLMContext}
 ---
 
 User Question: ${userQuestion}
-  `;
+`;
+  };
 
-    const { text: answer } = await generateText({
-      model: myProvider.languageModel('chat-model'),
-      prompt: prompt,
+  try {
+    const result = await generateStandardizedAIDealResponse({
+      dealContextParams,
+      promptBuilder,
+      // formatContextOptions can be added here if needed
+      // model can be specified here if different from default
     });
 
-    if (!answer || answer.trim() === '') {
-      return { success: false, error: 'The AI failed to generate an answer. Please try again.' };
+    if (result.success && result.text) {
+      return { success: true, answer: result.text };
+    } else {
+      // Use the error from the standardized response, or a fallback
+      return { success: false, error: result.error || 'The AI failed to generate an answer. Please try again.' };
     }
-
-    return { success: true, answer: answer.trim() };
   } catch (error) {
-    console.error('Error in answerTranscriptQuestionAction LLM call:', error);
-    if (error instanceof Error && error.message.includes('authentication')) {
-      return { success: false, error: 'LLM authentication failed. Please check your API key configuration.' };
-    }
+    // This catch block is more for unexpected errors *outside* of generateStandardizedAIDealResponse,
+    // as that function already catches and formats its internal errors.
+    console.error('Unexpected error in answerTranscriptQuestionAction:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'An unexpected error occurred while trying to get an answer.'
+      error: error instanceof Error ? error.message : 'An unexpected server error occurred.',
     };
   }
 }

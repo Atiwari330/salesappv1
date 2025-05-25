@@ -1,49 +1,56 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react'; // Removed useState as it's handled by the hook for main states
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { draftFollowUpEmailAction } from '../../actions'; // Corrected path
+import { draftFollowUpEmailAction } from '../../actions';
+import { useDealAIInteraction } from '@/lib/hooks/useDealAIInteraction'; // Import the hook
 
 interface TranscriptEmailGeneratorClientProps {
   transcriptId: string;
 }
 
-export function TranscriptEmailGeneratorClient({ transcriptId }: TranscriptEmailGeneratorClientProps) {
-  const [generatedEmail, setGeneratedEmail] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+// Define request and response types for this action
+interface EmailRequestData {
+  transcriptId: string;
+}
 
-  const handleGenerateEmail = async () => {
-    setIsLoading(true);
-    setError(null);
-    setGeneratedEmail(null); // Clear previous email
-    try {
-      const result = await draftFollowUpEmailAction(transcriptId);
-      if (result.success && result.emailText) {
-        setGeneratedEmail(result.emailText);
-        toast.success('Email drafted successfully!');
-      } else {
-        setError(result.error || 'Failed to generate email.');
-        toast.error(result.error || 'Failed to generate email.');
+interface EmailResponsePayload {
+  emailText: string; // Assuming draftFollowUpEmailAction returns { success: boolean, emailText?: string, error?: string }
+}
+
+export function TranscriptEmailGeneratorClient({ transcriptId }: TranscriptEmailGeneratorClientProps) {
+  const {
+    data: emailData, // Contains { emailText: string } on success
+    isLoading,
+    error,
+    execute: executeGenerateEmail,
+    // reset, // Not explicitly used, but available
+  } = useDealAIInteraction<EmailRequestData, EmailResponsePayload>({
+    action: async (params) => {
+      // Adapt draftFollowUpEmailAction which takes transcriptId directly
+      const result = await draftFollowUpEmailAction(params.transcriptId);
+      // Ensure the response fits ServerActionResponse structure for the hook
+      if (result.success && result.emailText !== undefined) {
+        return { success: true, data: { emailText: result.emailText } };
       }
-    } catch (e) {
-      console.error('Error generating email:', e);
-      const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+      return { success: false, error: result.error };
+    },
+    successMessage: 'Email drafted successfully!',
+    // onError and onSuccess can be added here if specific side-effects are needed
+  });
+
+  const handleGenerateEmail = () => {
+    executeGenerateEmail({ transcriptId });
   };
 
   const handleCopyToClipboard = async () => {
-    if (generatedEmail) {
+    if (emailData?.emailText) {
       try {
-        await navigator.clipboard.writeText(generatedEmail);
+        await navigator.clipboard.writeText(emailData.emailText);
         toast.success('Email copied to clipboard!');
       } catch (err) {
         console.error('Failed to copy email:', err);
@@ -62,7 +69,7 @@ export function TranscriptEmailGeneratorClient({ transcriptId }: TranscriptEmail
           <Button onClick={handleGenerateEmail} disabled={isLoading}>
             {isLoading ? 'Generating...' : 'Generate Email'}
           </Button>
-          {generatedEmail && !isLoading && !error && (
+          {emailData?.emailText && !isLoading && !error && (
             <Button onClick={handleCopyToClipboard} variant="outline">
               Copy Email
             </Button>
@@ -77,10 +84,10 @@ export function TranscriptEmailGeneratorClient({ transcriptId }: TranscriptEmail
           </Alert>
         )}
 
-        {generatedEmail && !isLoading && !error && (
+        {emailData?.emailText && !isLoading && !error && (
           <Textarea
             readOnly
-            value={generatedEmail}
+            value={emailData.emailText}
             placeholder="Generated email will appear here."
             rows={10}
             className="mt-2"
