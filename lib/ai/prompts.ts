@@ -1,5 +1,6 @@
 import type { ArtifactKind } from '@/components/artifact';
 import type { Geo } from '@vercel/functions';
+import type { DealAIContext } from './deal_context_types'; // Added import
 
 export const artifactsPrompt = `
 Artifacts is a special user interface mode that helps users with writing, editing, and other content creation tasks. When artifact is open, it is on the right side of the screen, while the conversation is on the left side. When creating or updating documents, changes are reflected in real-time on the artifacts and visible to the user.
@@ -119,3 +120,34 @@ Improve the following spreadsheet based on the given prompt.
 ${currentContent}
 `
         : '';
+
+export const promptBuilderTranscriptInsights = (
+  transcriptText: string,
+  rawDealAIContext?: DealAIContext
+): string => {
+  // TODO: Consider if rawDealAIContext can enhance the prompt in the future
+  // For example, knowing previous interactions or deal stage might help classify call type.
+
+  return `
+Analyze the following sales call transcript and provide insights.
+
+Transcript:
+---
+${transcriptText}
+---
+
+Based on the transcript, please:
+1.  **Identify the call type:** Determine if this is a 'first call', 'follow-up call', or if it's 'unknown'.
+2.  **Determine the overall sentiment:** Classify the sentiment as 'positive', 'negative', 'neutral', 'mixed', or 'unknown'.
+3.  **Provide a summary:** Write a concise 2-3 sentence summary of the call.
+
+Return your response as a single, parseable JSON object with the following keys: "call_type", "sentiment", "summary".
+
+Example JSON output:
+{
+  "call_type": "first call",
+  "sentiment": "positive",
+  "summary": "The customer expressed strong interest in the product's core features and scheduled a demo. They had some questions about pricing which were addressed."
+}
+`;
+};

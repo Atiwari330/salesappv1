@@ -213,8 +213,42 @@ export function TranscriptSection({ dealName, dealId, initialTranscripts }: Tran
                 <CardDescription>
                   Call Date: {new Date(transcript.callDate).toLocaleDateString()} at {transcript.callTime}
                 </CardDescription>
+                {/* Display AI Insights with processing/error states */}
+                <div className="mt-2 pt-2 border-t border-border">
+                  {transcript.ai_call_type === 'error' ? (
+                    <p className="text-sm text-destructive mt-1">
+                      AI insights unavailable for this transcript.
+                    </p>
+                  ) : transcript.ai_summary === null && transcript.ai_call_type === null && transcript.ai_sentiment === null ? (
+                    // Only show generating if all AI fields are null (initial state)
+                    // This assumes that if any field is populated (even with 'unknown'), processing has finished or started.
+                    // A more robust solution might involve a dedicated status field or timestamp check.
+                    <p className="text-sm text-muted-foreground mt-1">
+                      <em>AI insights generating...</em>
+                    </p>
+                  ) : (
+                    <>
+                      {transcript.ai_call_type && transcript.ai_call_type !== 'error' && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          <strong>Call Type:</strong> {transcript.ai_call_type}
+                        </p>
+                      )}
+                      {transcript.ai_sentiment && transcript.ai_sentiment !== 'error' && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          <strong>Sentiment:</strong> {transcript.ai_sentiment}
+                        </p>
+                      )}
+                      {transcript.ai_summary && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          <strong>AI Summary:</strong><br />
+                          {transcript.ai_summary}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent className="flex justify-end space-x-2">
+              <CardContent className="flex justify-end space-x-2 pt-4"> {/* Added pt-4 for spacing if summary is long */}
                 {/* <Button variant="outline" size="sm" onClick={() => handleViewTranscript(transcript)}>
                   View Transcript (Modal) 
                 </Button> */}

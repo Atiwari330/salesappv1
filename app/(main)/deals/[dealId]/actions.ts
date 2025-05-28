@@ -15,7 +15,8 @@ import {
   createMultipleActionItems, // Added for scanning transcripts
   getActionItemById, // Added for deleting action items
   getActionItemsByDealId, // Added for fetching action items
-  getActionItemsByTranscriptId // Added for transcript-specific items
+  getActionItemsByTranscriptId, // Added for transcript-specific items
+  updateTranscriptWithInsights, // Added for AI insights
 } from '@/lib/db/queries';
 import type { ActionItem, Transcript, Deal } from '@/lib/db/schema'; // Import ActionItem & Transcript types from schema
 import { getDealAIContext, formatDealContextForLLM } from '@/lib/ai/deal_context_builder'; // Needed for other actions
@@ -23,13 +24,15 @@ import { myProvider } from '@/lib/ai/providers'; // Needed for other actions
 import { generateText } from 'ai'; // Needed for other actions
 import { generateStandardizedAIDealResponse } from '@/lib/ai/utils'; // Import the new utility
 import type { DealAIContextParams, DealAIContext } from '@/lib/ai/deal_context_types'; // Import necessary types
+import { promptBuilderTranscriptInsights } from '@/lib/ai/prompts'; // Import the new prompt builder
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 
 export async function uploadTranscript(formData: FormData) {
   const session = await auth();
+  const userId = session?.user?.id;
 
-  if (!session?.user?.id) {
+  if (!userId) {
     redirect('/login');
   }
 
@@ -56,7 +59,7 @@ export async function uploadTranscript(formData: FormData) {
     }
 
     // Create transcript record
-    const [transcript] = await createTranscript({
+    const [newTranscript] = await createTranscript({
       dealId,
       fileName: file.name,
       content,
@@ -64,7 +67,20 @@ export async function uploadTranscript(formData: FormData) {
       callTime,
     });
 
-    return { success: true, transcript };
+    if (newTranscript) {
+      // Asynchronously generate AI insights (fire-and-forget)
+      // No await here to avoid blocking the response to the client
+      generateAndStoreTranscriptInsights({
+        transcriptId: newTranscript.id,
+        transcriptText: newTranscript.content,
+        userId: userId, // Pass the userId for context fetching if needed by generateStandardizedAIDealResponse
+      }).catch(error => {
+        // Log errors from the async insights generation
+        console.error('Error generating transcript insights asynchronously:', error);
+      });
+    }
+
+    return { success: true, transcript: newTranscript };
   } catch (error) {
     console.error('Upload error:', error);
     return {
@@ -73,6 +89,118 @@ export async function uploadTranscript(formData: FormData) {
     };
   }
 }
+
+export async function generateAndStoreTranscriptInsights({
+  transcriptId,
+  transcriptText,
+  userId,
+}: {
+  transcriptId: string;
+  transcriptText: string;
+  userId: string; // Needed for DealAIContextParams
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Fetch the transcript to get its dealId for context
+    const currentTranscript = await getTranscriptById({ id: transcriptId });
+    if (!currentTranscript) {
+      console.error(`generateAndStoreTranscriptInsights: Transcript not found for ID: ${transcriptId}`);
+      return { success: false, error: 'Transcript not found.' };
+    }
+
+    const dealId = currentTranscript.dealId;
+
+    // Prepare parameters for generateStandardizedAIDealResponse
+    // We pass transcriptText directly to our promptBuilder, so deal context can be minimal.
+    // However, generateStandardizedAIDealResponse requires dealContextParams for its internal fetching.
+    const dealContextParams: DealAIContextParams = {
+      dealId,
+      userId, // User ID of the user who uploaded/owns the deal context
+      includeTranscripts: false, // We are providing the specific transcript text directly
+      includeActionItems: false,
+      includeContacts: false,
+    };
+
+    const result = await generateStandardizedAIDealResponse({
+      dealContextParams,
+      promptBuilder: (formattedLLMContext, rawDealAIContext) =>
+        promptBuilderTranscriptInsights(transcriptText, rawDealAIContext),
+      // formatContextOptions can be minimal or default if promptBuilder primarily uses transcriptText
+      // model: myProvider.languageModel('specific-model'), // Optional: specify if needed
+    });
+
+    if (result.success && result.text) {
+      try {
+        let cleanedText = result.text.trim();
+        if (cleanedText.startsWith("```json")) {
+          cleanedText = cleanedText.substring(7); // Remove ```json
+          if (cleanedText.endsWith("```")) {
+            cleanedText = cleanedText.substring(0, cleanedText.length - 3);
+          }
+        } else if (cleanedText.startsWith("```")) { // Handle case with just ```
+          cleanedText = cleanedText.substring(3);
+          if (cleanedText.endsWith("```")) {
+            cleanedText = cleanedText.substring(0, cleanedText.length - 3);
+          }
+        }
+        cleanedText = cleanedText.trim(); // Trim again after stripping fences
+
+        const insights = JSON.parse(cleanedText) as {
+          call_type: string;
+          sentiment: string;
+          summary: string;
+        };
+
+        await updateTranscriptWithInsights({
+          transcriptId,
+          aiCallType: insights.call_type || null,
+          aiSentiment: insights.sentiment || null,
+          aiSummary: insights.summary || null,
+        });
+        console.log(`Successfully generated and stored AI insights for transcript: ${transcriptId}`);
+        // No revalidatePath here, as this is a background task.
+        // UI updates will be handled by polling or other mechanisms (Story 2.x)
+        return { success: true };
+      } catch (parseError) {
+        console.error(`Error parsing AI insights JSON for transcript ${transcriptId}:`, parseError, "LLM Response:", result.text);
+        // Optionally, store the raw error or a generic message
+        await updateTranscriptWithInsights({
+          transcriptId,
+          aiCallType: 'error',
+          aiSentiment: 'error',
+          aiSummary: 'Failed to parse AI response.',
+        });
+        return { success: false, error: 'Failed to parse AI response.' };
+      }
+    } else {
+      console.error(`AI failed to generate insights for transcript ${transcriptId}:`, result.error);
+      // Store error state in the transcript
+       await updateTranscriptWithInsights({
+        transcriptId,
+        aiCallType: 'error',
+        aiSentiment: 'error',
+        aiSummary: result.error || 'AI generation failed.',
+      });
+      return { success: false, error: result.error || 'AI generation failed.' };
+    }
+  } catch (error) {
+    console.error(`Unexpected error in generateAndStoreTranscriptInsights for ${transcriptId}:`, error);
+     try {
+      await updateTranscriptWithInsights({
+        transcriptId,
+        aiCallType: 'error',
+        aiSentiment: 'error',
+        aiSummary: error instanceof Error ? error.message : 'Unexpected error during AI processing.',
+      });
+    } catch (dbError) {
+      console.error(`Failed to even update transcript with error state for ${transcriptId}:`, dbError);
+    }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unexpected server error during AI processing.',
+    };
+  }
+}
+
 
 // Action Item Server Actions
 

@@ -785,6 +785,38 @@ export async function getTranscriptCountByDealId({ dealId }: { dealId: string })
   }
 }
 
+export async function updateTranscriptWithInsights({
+  transcriptId,
+  aiCallType,
+  aiSentiment,
+  aiSummary,
+}: {
+  transcriptId: string;
+  aiCallType: string | null;
+  aiSentiment: string | null;
+  aiSummary: string | null;
+}): Promise<Transcript | null> {
+  try {
+    const [updatedTranscriptRecord] = await db // Renamed to avoid conflict with schema export
+      .update(transcript)
+      .set({
+        ai_call_type: aiCallType,
+        ai_sentiment: aiSentiment,
+        ai_summary: aiSummary,
+        updatedAt: new Date(),
+      })
+      .where(eq(transcript.id, transcriptId))
+      .returning();
+    return updatedTranscriptRecord || null;
+  } catch (error) {
+    console.error("Error in updateTranscriptWithInsights:", error);
+    throw new ChatSDKError(
+      'bad_request:database',
+      'Failed to update transcript with AI insights',
+    );
+  }
+}
+
 // Contact and DealContact Queries
 
 export async function findDealByIdAndUserId({ dealId, userId }: { dealId: string; userId: string }): Promise<Deal | undefined> {

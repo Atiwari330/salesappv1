@@ -190,6 +190,9 @@ export const transcript = pgTable('Transcript', {
   content: text('content').notNull(),
   callDate: varchar('callDate', { length: 10 }).notNull(), // YYYY-MM-DD format
   callTime: varchar('callTime', { length: 5 }).notNull(), // HH:MM format
+  ai_call_type: text('ai_call_type'),
+  ai_sentiment: text('ai_sentiment'),
+  ai_summary: text('ai_summary'),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 });
